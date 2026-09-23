@@ -10,7 +10,7 @@ Related code:
 - `App/src/domain/exercises.ts` — `visibleExercises`, `hiddenExercises`, `withHidden`, `unusedBuiltInIds`
 - `App/src/domain/backup.ts` — `upgradeAppData` (v1 → v2) and `hiddenExerciseIds` validation
 - `App/src/ui/components/BarChart.tsx` — generic bars plus `dayBars` / `weekBars` builders
-- `App/src/ui/views/HistoryView.tsx` — Days/Weeks grouping
+- `App/src/ui/views/HistoryView.tsx` — "By exercise" rows open the exercise page (the view itself: `UI-HISTORY-PERIODS-NERD-DEMO`)
 - `App/src/ui/views/ExerciseSheet.tsx` — the exercise page
 - `App/src/ui/views/ExercisesView.tsx` — opens the page, "Hide N unused", Hidden section
 - `App/src/ui/components/ExercisePicker.tsx` — leaves hidden exercises out (search still finds them)

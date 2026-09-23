@@ -104,6 +104,87 @@
   gap: var(--space-2);
 }
 
+/* Period navigation (History) -------------------------------------------- */
+.periodnav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.periodnav__label {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.periodnav__title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.periodnav__sub {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}
+
+.periodnav .icon-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.toolbar__select {
+  flex: 1 1 180px;
+  max-width: 280px;
+  min-height: 40px;
+}
+
+.history__compared {
+  margin-top: calc(-1 * var(--space-2));
+}
+
+/* Nerd view ---------------------------------------------------------------- */
+.nerd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.nerd__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+}
+
+.nerd__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+
+.nerd__row:first-child {
+  border-top: 0;
+}
+
+.nerd__row dt {
+  color: var(--text-2);
+}
+
+.nerd__row dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Day rows in History ------------------------------------------------------ */
 .dayrow {
   display: grid;

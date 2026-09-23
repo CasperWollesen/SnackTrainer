@@ -94,6 +94,24 @@ export function weekdayOf(iso: ISODate): number {
   return jsDay === 0 ? 7 : jsDay;
 }
 
+/** First day of the month containing `iso`. */
+export function startOfMonth(iso: ISODate): ISODate {
+  return `${iso.slice(0, 7)}-01`;
+}
+
+/** Last day of the month containing `iso`. */
+export function endOfMonth(iso: ISODate): ISODate {
+  return addDays(addMonths(startOfMonth(iso), 1), -1);
+}
+
+/** Adds calendar months; the day is clamped to the target month (31 Jan + 1 month = 28/29 Feb). */
+export function addMonths(iso: ISODate, months: number): ISODate {
+  const d = parseISODate(iso);
+  const first = new Date(d.getFullYear(), d.getMonth() + months, 1, 12);
+  const lastDay = new Date(first.getFullYear(), first.getMonth() + 1, 0, 12).getDate();
+  return toISODate(new Date(first.getFullYear(), first.getMonth(), Math.min(d.getDate(), lastDay), 12));
+}
+
 /** Monday of the ISO week containing `iso`. */
 export function startOfWeek(iso: ISODate): ISODate {
   return addDays(iso, 1 - weekdayOf(iso));

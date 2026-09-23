@@ -1,4 +1,6 @@
-import { addDays, daysBetween, parseISODate, weekdayOf } from '../domain/dates';
+import { addDays, daysBetween, isoWeekNumber, parseISODate, weekdayOf } from '../domain/dates';
+import type { Period } from '../domain/periods';
+import { metricValue, type Delta, type Metric } from '../domain/stats';
 import type { Entry, Exercise, ISODate } from '../domain/types';
 import { MONTH_NAMES, MONTH_SHORT, WEEKDAY_NAMES, WEEKDAY_SHORT, texts } from '../texts';
 
@@ -24,10 +26,68 @@ export function formatDayShort(iso: ISODate): string {
 
 /** "21–27 Sep" or "28 Sep – 4 Oct" for the week starting on `monday`. */
 export function formatWeekRange(monday: ISODate): string {
-  const a = parseISODate(monday);
-  const b = parseISODate(addDays(monday, 6));
-  if (a.getMonth() === b.getMonth()) return `${a.getDate()}–${b.getDate()} ${MONTH_SHORT[b.getMonth()] ?? ''}`;
-  return `${a.getDate()} ${MONTH_SHORT[a.getMonth()] ?? ''} – ${b.getDate()} ${MONTH_SHORT[b.getMonth()] ?? ''}`;
+  return formatDateRange(monday, addDays(monday, 6));
+}
+
+/**
+ * "Wed 23 Sep", "17–23 Sep" or "24 Aug – 23 Sep". The year is added when the range ends in a
+ * different year than `today` (or starts in another year than it ends).
+ */
+export function formatDateRange(from: ISODate, to: ISODate, today?: ISODate): string {
+  const a = parseISODate(from);
+  const b = parseISODate(to);
+  const year = a.getFullYear() !== b.getFullYear() || (today !== undefined && b.getFullYear() !== parseISODate(today).getFullYear());
+  const suffix = year ? ` ${b.getFullYear()}` : '';
+  if (from === to) return `${formatDayShort(from)}${suffix}`;
+  if (a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) {
+    return `${a.getDate()}–${b.getDate()} ${MONTH_SHORT[b.getMonth()] ?? ''}${suffix}`;
+  }
+  const aYear = a.getFullYear() !== b.getFullYear() ? ` ${a.getFullYear()}` : '';
+  return `${a.getDate()} ${MONTH_SHORT[a.getMonth()] ?? ''}${aYear} – ${b.getDate()} ${MONTH_SHORT[b.getMonth()] ?? ''}${suffix}`;
+}
+
+/** Title and subtitle for a History period, relative to today where that reads better. */
+export function formatPeriod(p: Period, today: ISODate): { title: string; subtitle: string } {
+  const h = texts.history.period;
+  switch (p.kind) {
+    case 'day':
+      return { title: formatRelativeDay(p.from, today), subtitle: formatDateWithYear(p.from) };
+    case 'week': {
+      const current = p.from <= today && today <= p.to;
+      const last = !current && daysBetween(p.to, today) >= 1 && daysBetween(p.to, today) <= 7;
+      const week = texts.history.week(isoWeekNumber(p.from));
+      return { title: current ? h.thisWeek : last ? h.lastWeek : week, subtitle: `${week} · ${formatDateRange(p.from, p.to, today)}` };
+    }
+    case 'month': {
+      const d = parseISODate(p.from);
+      const current = p.from <= today && today <= p.to;
+      return { title: `${MONTH_NAMES[d.getMonth()] ?? ''} ${d.getFullYear()}`, subtitle: current ? h.thisMonth : formatDateRange(p.from, p.to, today) };
+    }
+    case 'last7':
+    case 'last31': {
+      const days = p.kind === 'last7' ? 7 : 31;
+      return { title: p.to === today ? h.lastDays(days) : h.days(days), subtitle: formatDateRange(p.from, p.to, today) };
+    }
+  }
+}
+
+/** Chart value for a metric: time in minutes (one decimal), others as counts. */
+export function chartValue(t: { reps: number; seconds: number; sessions: number }, metric: Metric): number {
+  const v = metricValue(t, metric);
+  return metric === 'time' ? Math.round(v / 6) / 10 : v;
+}
+
+export function formatChartValue(v: number, metric: Metric): string {
+  return metric === 'time' ? `${v} ${texts.common.minutes}` : String(v);
+}
+
+/** "▲ 12%", "▼ 8%", "= 0%", "new" or null (nothing to compare). */
+export function formatDelta(delta: Delta): { text: string; tone: 'up' | 'down' | 'flat' } | undefined {
+  if (delta.kind === 'none') return undefined;
+  if (delta.kind === 'new') return { text: texts.history.deltaNew, tone: 'up' };
+  if (delta.percent > 0) return { text: `▲ ${delta.percent}%`, tone: 'up' };
+  if (delta.percent < 0) return { text: `▼ ${Math.abs(delta.percent)}%`, tone: 'down' };
+  return { text: '= 0%', tone: 'flat' };
 }
 
 /** "23 Sep 2026" */

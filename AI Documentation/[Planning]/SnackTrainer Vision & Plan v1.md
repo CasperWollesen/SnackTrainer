@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r5`
+File revision: `2026_09_r6`
 Last reviewed: `2026-09-23`
 
 Related repositories (inspiration, not dependencies):
@@ -35,7 +35,7 @@ counting, weights, social features, streak gamification.
 | Tab | What it shows |
 |---|---|
 | **Today** | The selected day (default today) with ← / → to step back and forth. Stat tiles (reps, time, sessions) and the list of sessions, each with its clock time and the entries logged in it ("07:30 · 20 Push-Up"). Tap an entry to edit or delete it. |
-| **History** | Group by **Days** (14 days / 4 weeks / 8 weeks) or **Weeks** (8 / 16 / 26 ISO weeks, Monday–Sunday): bar chart of reps, toggle to time. Stat tiles for the range. A list of days (tapping one opens it on the Today tab) or of weeks. A per-exercise breakdown for the range; tapping a row opens that exercise's page. |
+| **History** | Period: **Day** (default), **Week** (ISO, Mon–Sun), **Month**, rolling **7 days** / **31 days**, with ← / → back in time and "Now". Exercise filter and Reps / Time / Sessions metric. Stat tiles with change against the previous period (running week/month compared "so far"), a breakdown chart (by hour for a day, by day otherwise; tapping a day opens it as a Day), a trend over the last 12–14 periods (tap to jump), the active days (open on Today) and a per-exercise breakdown with change (opens the exercise page). A **Nerd view** toggle adds averages, records, time-of-day and weekday charts, streaks and all-time totals. |
 | **Exercises** | Search box, "Recent" first, then all visible exercises grouped by category. Tapping an exercise opens its **exercise page**. Custom exercises can be added. "Hide N unused" hides every never-logged built-in at once; a "Hidden" section lists hidden exercises with "Show all". |
 
 **Exercise page** (sheet): totals, sessions, best session (most reps or longest time summed over one session) and best set (single entry), a 4-week daily / 26-week weekly chart and every session with the exercise (the best one marked; tapping one opens that day). Footer: Hide / Show again, Edit (custom only), Log.
@@ -106,6 +106,10 @@ link button. Only the link is shared, never data.
     (`findSessionFor` skips them), so removal never splits real history. A banner and a "Demo" tag
     on Today's sessions show when demo data is present. Add/remove use Undo, like everything else.
     (The owner first dropped a dev-only `?demo` button, then asked for this in Settings.)
+12. **History is period-based** (`domain/periods.ts`), replacing the earlier Days/Weeks range toggle.
+    A running week or month is compared with the same number of days of the previous one, so a
+    Wednesday does not look like a collapse against a full week. The view state lives in App so it
+    survives a jump to Today and back; it is not persisted.
 
 ## Data Model
 
@@ -203,9 +207,9 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 ### Milestone 3 – History periods and insight
 
 - [x] Demo data in Settings (add, refresh, remove; marked, banner)
-- [ ] History periods: day (default), current week, current month, rolling 7 / 31 days, step back in time
-- [ ] Totals per period compared with the previous period, trend over recent periods, exercise filter
-- [ ] Nerd view: averages, records, streaks, time of day, weekdays
+- [x] History periods: day (default), current week, current month, rolling 7 / 31 days, step back in time
+- [x] Totals per period compared with the previous period, trend over recent periods, exercise filter
+- [x] Nerd view: averages, records, streaks, time of day, weekdays
 
 ### Ideas parked (not planned)
 

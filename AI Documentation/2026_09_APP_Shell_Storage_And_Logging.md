@@ -62,7 +62,7 @@ Data flow: view → `useActions` (or `repository.setSettings` for settings) → 
 | `src/ui/views/TodayView.tsx` | Day header with ← / →, stat tiles, session cards (newest first), entry rows |
 | `src/ui/views/LogSheet.tsx` | Two-step sheet: `ExercisePicker` → `Counter`/`Stopwatch` + time override; "Save & add another" |
 | `src/ui/views/EntrySheet.tsx` | Edit amount/mode/time or delete one entry |
-| `src/ui/views/HistoryView.tsx` | Days/Weeks grouping, range and metric (reps/time) toggles, `BarChart`, stat tiles, day or week list, per-exercise totals (see `UI-HISTORY-WEEKS-EXERCISE-PAGE`) |
+| `src/ui/views/HistoryView.tsx` | Period-based History with filter, metric, deltas, trend and Nerd view (see `UI-HISTORY-PERIODS-NERD-DEMO`) |
 | `src/ui/views/ExercisesView.tsx` | Catalogue with totals and last use; opens the exercise page (see `UI-HISTORY-WEEKS-EXERCISE-PAGE`) |
 | `src/ui/views/ExerciseEditor.tsx` | Create/edit/delete custom exercises |
 | `src/ui/views/SettingsSheet.tsx` | Install, session gap stepper, backup export/import with preview, delete all, about |

@@ -1,7 +1,7 @@
 # History Weeks, Exercise Page and Hidden Exercises (Milestone 2)
 
 Documentation ID: `UI-HISTORY-WEEKS-EXERCISE-PAGE`
-File revision: `2026_09_r1`
+File revision: `2026_09_r2`
 Last reviewed: `2026-09-23`
 
 Related code:
@@ -19,15 +19,16 @@ Related code:
 
 Related documentation:
 - `2026_09_APP_Shell_Storage_And_Logging.md` (`APP-SHELL-STORAGE-LOGGING`) — storage, sessions, the rest of the UI
+- `2026_09_UI_History_Periods_Nerd_Demo.md` (`UI-HISTORY-PERIODS-NERD-DEMO`) — the current History view
 - `[Planning]/SnackTrainer Vision & Plan v1.md` (`PLANNING-VISION-V1`) — decisions 8 and 9, milestone 2
 
 ## Short Version
 
 Three milestone-2 features:
 
-1. **Weekly History.** History has a *Days / Weeks* toggle. Weeks shows 8, 16 or 26 whole ISO weeks
-   (Monday–Sunday) as bars labelled with the week number, and a week list ("This week · 21–27 Sep",
-   active days, sessions, entries, reps/time).
+1. **Weekly History** (superseded). History used to have a *Days / Weeks* toggle. It was replaced by
+   the period-based History described in `UI-HISTORY-PERIODS-NERD-DEMO`. `weeklyTotals`, `weekBars`
+   and the ISO week helpers are still used there and by the exercise page.
 2. **Exercise page.** A tall sheet for one exercise: total, sessions, best session, best set, a
    4-week daily or 26-week weekly chart, and every session with the exercise (newest first, 20 shown
    before "Show all"). The best session is marked. Tapping a session opens that day on Today. It is

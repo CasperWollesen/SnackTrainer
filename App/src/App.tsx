@@ -19,7 +19,7 @@ import { EntrySheet } from './ui/views/EntrySheet';
 import { ExerciseEditor } from './ui/views/ExerciseEditor';
 import { ExerciseSheet } from './ui/views/ExerciseSheet';
 import { ExercisesView } from './ui/views/ExercisesView';
-import { HistoryView } from './ui/views/HistoryView';
+import { HistoryView, initialHistoryState, type HistoryState } from './ui/views/HistoryView';
 import { LogSheet } from './ui/views/LogSheet';
 import { SettingsSheet } from './ui/views/SettingsSheet';
 import { TodayView } from './ui/views/TodayView';
@@ -50,6 +50,8 @@ function Shell() {
   const [tab, setTab] = useState<Tab>('today');
   const [date, setDate] = useState<ISODate>(today);
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
+  const [history, setHistory] = useState<HistoryState>(() => initialHistoryState(today));
+  const changeHistory = useCallback((patch: Partial<HistoryState>) => setHistory((h) => ({ ...h, ...patch })), []);
 
   // Warn once when stored data could not be read.
   useEffect(() => {
@@ -62,6 +64,7 @@ function Shell() {
   if (lastToday !== today) {
     setLastToday(today);
     if (date === lastToday) setDate(today);
+    if (history.anchor === lastToday) setHistory((h) => ({ ...h, anchor: today }));
   }
 
   const closeOverlay = useCallback(() => setOverlay({ kind: 'none' }), []);
@@ -128,7 +131,7 @@ function Shell() {
             onOpenEntry={(entry: Entry) => setOverlay({ kind: 'entry', entryId: entry.id })}
           />
         ) : tab === 'history' ? (
-          <HistoryView data={data} today={today} onOpenDay={openDay} onOpenExercise={openExercise} />
+          <HistoryView data={data} today={today} state={history} onChange={changeHistory} onOpenDay={openDay} onOpenExercise={openExercise} />
         ) : (
           <ExercisesView
             data={data}

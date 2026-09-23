@@ -1,93 +1,173 @@
-import { BarChart3, ChevronRight } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { addDays, isoWeekNumber, startOfWeek } from '../../domain/dates';
-import { findExercise, unknownExercise } from '../../domain/exercises';
-import { dailyTotals, exerciseTotals, sessionsBetween, totalsOf, weeklyTotals } from '../../domain/sessions';
+import { BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo } from 'react';
+import { compareISO, isoWeekNumber, parseISODate } from '../../domain/dates';
+import { allExercises, findExercise, unknownExercise } from '../../domain/exercises';
+import { comparisonFor, containsDate, isLatest, periodAt, recentPeriods, shiftPeriod, type Period, type PeriodKind } from '../../domain/periods';
+import { dailyTotals, exerciseTotals, sessionsBetween, sessionsWithExercise } from '../../domain/sessions';
+import { deltaOf, hourlyTotals, summarize, type Metric } from '../../domain/stats';
 import type { AppData, ISODate } from '../../domain/types';
-import { texts } from '../../texts';
-import { BarChart, dayBars, weekBars } from '../components/BarChart';
-import { Segmented } from '../components/Button';
+import { MONTH_SHORT, texts } from '../../texts';
+import { BarChart, dayBars, type ChartBar } from '../components/BarChart';
+import { Button, IconButton, Segmented } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { Toggle } from '../components/FormFields';
 import { Section } from '../components/Section';
 import { StatTiles } from '../components/StatTiles';
-import { formatDuration, formatRelativeDay, formatTotalTime, formatWeekRange } from '../format';
+import { chartValue, formatChartValue, formatDateRange, formatDelta, formatDuration, formatPeriod, formatRelativeDay, formatTotalTime } from '../format';
+import { NerdPanel } from './NerdPanel';
+
+/** History's view state; kept in App so it survives switching tabs. */
+export interface HistoryState {
+  kind: PeriodKind;
+  /** A day inside the shown period (the last day for rolling windows). */
+  anchor: ISODate;
+  metric: Metric;
+  /** Narrow everything to one exercise, or null for all. */
+  exerciseId: string | null;
+  nerd: boolean;
+}
+
+export function initialHistoryState(today: ISODate): HistoryState {
+  return { kind: 'day', anchor: today, metric: 'reps', exerciseId: null, nerd: false };
+}
 
 export interface HistoryViewProps {
   data: AppData;
   today: ISODate;
+  state: HistoryState;
+  onChange: (patch: Partial<HistoryState>) => void;
   onOpenDay: (date: ISODate) => void;
   onOpenExercise: (exerciseId: string) => void;
 }
 
-type Group = 'days' | 'weeks';
-/** Number of days (day grouping) or weeks (week grouping). */
-type Range = '14' | '28' | '56' | '8' | '16' | '26';
-type Metric = 'reps' | 'time';
-
-const RANGE_OPTIONS: Record<Group, { value: Range; label: string }[]> = {
-  days: [
-    { value: '14', label: texts.history.range.twoWeeks },
-    { value: '28', label: texts.history.range.fourWeeks },
-    { value: '56', label: texts.history.range.eightWeeks },
-  ],
-  weeks: [
-    { value: '8', label: texts.history.range.eightWeeks },
-    { value: '16', label: texts.history.range.sixteenWeeks },
-    { value: '26', label: texts.history.range.halfYear },
-  ],
-};
-
-const GROUP_OPTIONS: { value: Group; label: string }[] = [
-  { value: 'days', label: texts.history.group.days },
-  { value: 'weeks', label: texts.history.group.weeks },
-];
+const PERIOD_OPTIONS: { value: PeriodKind; label: string }[] = (['day', 'week', 'month', 'last7', 'last31'] as const).map((k) => ({
+  value: k,
+  label: texts.history.periods[k],
+}));
 
 const METRIC_OPTIONS: { value: Metric; label: string }[] = [
   { value: 'reps', label: texts.history.metric.reps },
   { value: 'time', label: texts.history.metric.time },
+  { value: 'sessions', label: texts.history.metric.sessions },
 ];
 
-/** First day of the range: `n` days back, or the Monday `n` weeks back (whole ISO weeks). */
-function rangeStart(group: Group, range: Range, today: ISODate): ISODate {
-  const n = Number(range);
-  return group === 'days' ? addDays(today, -(n - 1)) : addDays(startOfWeek(today), -7 * (n - 1));
+/** Periods shown in the trend chart. */
+const TREND_COUNT: Record<PeriodKind, number> = { day: 14, week: 12, month: 12, last7: 12, last31: 12 };
+
+/** The anchor that keeps a period's position when switching kind: its last elapsed day. */
+function anchorFor(p: Period, today: ISODate): ISODate {
+  return compareISO(p.to, today) > 0 ? today : p.to;
 }
 
-export function HistoryView({ data, today, onOpenDay, onOpenExercise }: HistoryViewProps) {
-  const [group, setGroup] = useState<Group>('days');
-  const [range, setRange] = useState<Range>('14');
-  const [metric, setMetric] = useState<Metric>('reps');
-  const [selected, setSelected] = useState<string | null>(null);
+function trendLabel(p: Period): string {
+  switch (p.kind) {
+    case 'day':
+      return String(Number(p.from.slice(8, 10)));
+    case 'week':
+      return String(isoWeekNumber(p.from));
+    case 'month':
+      return (MONTH_SHORT[parseISODate(p.from).getMonth()] ?? '').slice(0, 3);
+    default:
+      return String(Number(p.to.slice(8, 10)));
+  }
+}
 
-  const from = rangeStart(group, range, today);
-  const days = useMemo(() => dailyTotals(data, from, today), [data, from, today]);
-  const weeks = useMemo(() => (group === 'weeks' ? weeklyTotals(data, from, today) : []), [data, group, from, today]);
-  const sessions = useMemo(() => sessionsBetween(data, from, today), [data, from, today]);
-  const totals = useMemo(() => totalsOf(sessions), [sessions]);
-  const perExercise = useMemo(() => exerciseTotals(sessions), [sessions]);
-  const activeDays = days.filter((d) => d.entries > 0);
-  const activeWeeks = weeks.filter((w) => w.entries > 0);
+export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExercise }: HistoryViewProps) {
+  const period = periodAt(state.kind, state.anchor);
+  const comparison = comparisonFor(period, today);
+  const filtered = useMemo(
+    () => (state.exerciseId ? { sessions: sessionsWithExercise(data.sessions, state.exerciseId) } : data),
+    [data, state.exerciseId],
+  );
 
-  const valueOf = (t: { reps: number; seconds: number }) => (metric === 'reps' ? t.reps : Math.round(t.seconds / 60));
-  const bars =
-    group === 'days'
-      ? dayBars(days.map((d) => ({ date: d.date, value: valueOf(d) })), today)
-      : weekBars(weeks.map((w) => ({ weekStart: w.weekStart, value: valueOf(w) })), today);
-  const chartLabel =
-    group === 'days'
-      ? metric === 'reps'
-        ? texts.history.chartLabel
-        : texts.history.chartLabelTime
-      : metric === 'reps'
-        ? texts.history.chartLabelWeek
-        : texts.history.chartLabelWeekTime;
-  const hasAny = data.sessions.length > 0;
+  const current = summarize(filtered, comparison.current);
+  const previous = summarize(filtered, comparison.previous);
+  const sessions = sessionsBetween(filtered, comparison.current.from, comparison.current.to);
+  const prevSessions = sessionsBetween(filtered, comparison.previous.from, comparison.previous.to);
 
-  const changeGroup = (next: Group) => {
-    setGroup(next);
-    setRange(RANGE_OPTIONS[next][0]!.value);
-    setSelected(null);
-  };
+  const usedExercises = useMemo(() => {
+    const used = new Set(data.sessions.flatMap((s) => s.entries.map((e) => e.exerciseId)));
+    return allExercises(data)
+      .filter((e) => used.has(e.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [data]);
+
+  if (data.sessions.length === 0) {
+    return (
+      <div className="view">
+        <header className="view__header">
+          <div className="view__heading">
+            <h1 className="view__title">{texts.history.title}</h1>
+          </div>
+        </header>
+        <EmptyState icon={<BarChart3 size={26} />} title={texts.history.emptyTitle} text={texts.history.emptyText} />
+      </div>
+    );
+  }
+
+  const { title, subtitle } = formatPeriod(period, today);
+  const latest = isLatest(period, today);
+  const showingNow = containsDate(period, today) && (state.kind === 'day' || state.kind === 'week' || state.kind === 'month' || period.to === today);
+  const go = (p: Period) => onChange({ anchor: anchorFor(p, today) });
+  const metric = state.metric;
+  const isDay = state.kind === 'day';
+
+  // --- tiles
+  const tile = (cur: number, prev: number) => formatDelta(deltaOf(cur, prev));
+  const stats = [
+    { label: texts.history.stats.reps, value: String(current.reps), tone: 'accent' as const, delta: tile(current.reps, previous.reps) },
+    {
+      label: texts.history.stats.time,
+      value: current.seconds > 0 ? formatTotalTime(current.seconds) : '–',
+      tone: 'time' as const,
+      delta: tile(current.seconds, previous.seconds),
+    },
+    { label: texts.history.stats.sessions, value: String(current.sessions), delta: tile(current.sessions, previous.sessions) },
+    isDay
+      ? { label: texts.history.stats.entries, value: String(current.entries), delta: tile(current.entries, previous.entries) }
+      : {
+          label: texts.history.stats.activeDays,
+          value: `${current.activeDays}/${current.days}`,
+          delta: tile(current.activeDays, previous.activeDays),
+        },
+  ];
+  const comparedRange = formatDateRange(comparison.previous.from, comparison.previous.to, today);
+
+  // --- breakdown chart: hours for a day, days otherwise
+  let breakdown: ChartBar[];
+  if (isDay) {
+    breakdown = hourlyTotals(sessions).map((h) => ({
+      id: `h${h.key}`,
+      value: chartValue(h, metric),
+      axisLabel: String(h.key),
+      name: `${String(h.key).padStart(2, '0')}:00–${String(h.key).padStart(2, '0')}:59`,
+    }));
+  } else {
+    const days = dailyTotals(filtered, period.from, period.to);
+    breakdown = dayBars(
+      days.map((d) => ({ date: d.date, value: chartValue(d, metric) })),
+      today,
+    );
+  }
+
+  // --- trend over recent periods
+  const trendPeriods = recentPeriods(period, TREND_COUNT[state.kind]);
+  const trendValues = trendPeriods.map((p) => chartValue(summarize(filtered, p), metric));
+  const trendBars: ChartBar[] = trendPeriods.map((p, i) => ({
+    id: `${p.from}_${p.to}`,
+    value: trendValues[i]!,
+    axisLabel: trendLabel(p),
+    name: formatPeriod(p, today).title + (p.kind === 'day' ? '' : ` (${formatDateRange(p.from, p.to, today)})`),
+    current: i === trendPeriods.length - 1,
+    muted: compareISO(p.from, today) > 0,
+  }));
+  const trendAvg = trendValues.reduce((a, b) => a + b, 0) / Math.max(1, trendValues.length);
+
+  // --- lists
+  const activeDays = isDay ? [] : dailyTotals(filtered, comparison.current.from, comparison.current.to).filter((d) => d.entries > 0).reverse();
+  const perExercise = exerciseTotals(sessions);
+  const prevPerExercise = new Map(exerciseTotals(prevSessions).map((r) => [r.exerciseId, r]));
+  const filterExercise = state.exerciseId ? (findExercise(data, state.exerciseId) ?? unknownExercise(state.exerciseId)) : null;
 
   return (
     <div className="view">
@@ -97,128 +177,174 @@ export function HistoryView({ data, today, onOpenDay, onOpenExercise }: HistoryV
         </div>
       </header>
 
-      {!hasAny ? (
-        <EmptyState icon={<BarChart3 size={26} />} title={texts.history.emptyTitle} text={texts.history.emptyText} />
-      ) : (
-        <>
-          <div className="toolbar">
-            <Segmented value={group} options={GROUP_OPTIONS} onChange={changeGroup} label={texts.history.group.label} />
-            <Segmented value={range} options={RANGE_OPTIONS[group]} onChange={setRange} label={texts.history.rangeLabel} />
-            <Segmented value={metric} options={METRIC_OPTIONS} onChange={setMetric} label={texts.history.metric.label} />
-          </div>
+      <Segmented
+        value={state.kind}
+        options={PERIOD_OPTIONS}
+        onChange={(kind) => onChange({ kind, anchor: anchorFor(period, today) })}
+        label={texts.history.periodLabel}
+      />
 
-          <div className="card">
-            <BarChart
-              bars={bars}
-              selected={selected}
-              onSelect={(d) => setSelected((cur) => (cur === d ? null : d))}
-              tone={metric}
-              format={(v) => (metric === 'reps' ? String(v) : `${v} ${texts.common.minutes}`)}
-              label={chartLabel}
-            />
-          </div>
+      <div className="periodnav">
+        <IconButton label={texts.history.previous} icon={<ChevronLeft size={22} />} onClick={() => go(shiftPeriod(period, -1))} />
+        <div className="periodnav__label">
+          <span className="periodnav__title">{title}</span>
+          <span className="periodnav__sub">{subtitle}</span>
+        </div>
+        {!showingNow ? (
+          <Button size="sm" variant="ghost" onClick={() => onChange({ anchor: today })}>
+            {texts.history.now}
+          </Button>
+        ) : null}
+        <IconButton label={texts.history.next} icon={<ChevronRight size={22} />} disabled={latest} onClick={() => go(shiftPeriod(period, 1))} />
+      </div>
 
-          <StatTiles
-            stats={[
-              { label: texts.history.stats.reps, value: String(totals.reps), tone: 'accent' },
-              { label: texts.history.stats.time, value: totals.seconds > 0 ? formatTotalTime(totals.seconds) : '–', tone: 'time' },
-              { label: texts.history.stats.sessions, value: String(totals.sessions) },
-              { label: texts.history.stats.activeDays, value: `${activeDays.length}/${days.length}` },
-            ]}
+      <div className="toolbar">
+        <select
+          className="input input--select toolbar__select"
+          aria-label={texts.history.filterLabel}
+          value={state.exerciseId ?? ''}
+          onChange={(e) => onChange({ exerciseId: e.target.value || null })}
+        >
+          <option value="">{texts.history.allExercises}</option>
+          {usedExercises.map((e) => (
+            <option key={e.id} value={e.id}>
+              {`${e.emoji} ${e.name}`.trim()}
+            </option>
+          ))}
+        </select>
+        <Segmented value={metric} options={METRIC_OPTIONS} onChange={(m) => onChange({ metric: m })} label={texts.history.metric.label} />
+      </div>
+
+      <StatTiles stats={stats} />
+      <p className="field__hint history__compared">
+        {comparison.partial ? texts.history.comparedSoFar(comparedRange) : texts.history.compared(comparedRange)}
+      </p>
+
+      <Section title={isDay ? texts.history.byHour : texts.history.byDay}>
+        <div className="card">
+          <BarChart
+            bars={breakdown}
+            selected={null}
+            onSelect={(id) => {
+              if (!isDay && compareISO(id, today) <= 0) onChange({ kind: 'day', anchor: id });
+            }}
+            tone={metric === 'time' ? 'time' : 'reps'}
+            format={(v) => formatChartValue(v, metric)}
+            label={isDay ? texts.history.byHour : texts.history.byDay}
           />
+        </div>
+        <p className="field__hint">{isDay ? texts.history.byHourHint : texts.history.byDayHint}</p>
+      </Section>
 
-          {group === 'weeks' ? (
-            <Section title={texts.history.weeks} count={activeWeeks.length}>
-              <div className="list">
-                {[...activeWeeks].reverse().map((w) => (
-                  <div key={w.weekStart} className={`dayrow dayrow--static${w.weekStart === selected ? ' dayrow--selected' : ''}`}>
-                    <span className="dayrow__label">
-                      <span className="dayrow__name">
-                        {w.weekStart === startOfWeek(today) ? texts.history.thisWeek : texts.history.week(isoWeekNumber(w.weekStart))}
-                        <span className="dayrow__sub"> · {formatWeekRange(w.weekStart)}</span>
-                      </span>
-                      <span className="dayrow__meta">
-                        {texts.history.activeDays(w.activeDays)} · {texts.today.session(w.sessions)} · {texts.history.entries(w.entries)}
-                      </span>
-                    </span>
-                    <span className="dayrow__value">
-                      {w.reps > 0 ? (
-                        <>
-                          {w.reps}
-                          <small>{texts.common.reps}</small>
-                        </>
-                      ) : null}
-                      {w.reps > 0 && w.seconds > 0 ? ' · ' : null}
-                      {w.seconds > 0 ? <span className="dayrow__value--time">{formatDuration(w.seconds)}</span> : null}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          ) : (
-          <Section title={texts.history.days} count={activeDays.length}>
-            <div className="list">
-              {[...activeDays].reverse().map((d) => (
-                <button
-                  key={d.date}
-                  type="button"
-                  className={`dayrow${d.date === selected ? ' dayrow--selected' : ''}`}
-                  onClick={() => onOpenDay(d.date)}
-                  aria-label={`${texts.history.openDay}: ${formatRelativeDay(d.date, today)}`}
-                >
-                  <span className="dayrow__label">
-                    <span className="dayrow__name">{formatRelativeDay(d.date, today)}</span>
-                    <span className="dayrow__meta">
-                      {texts.today.session(d.sessions)} · {texts.history.entries(d.entries)}
+      <Section title={texts.history.trend}>
+        <div className="card">
+          <BarChart
+            bars={trendBars}
+            selected={null}
+            onSelect={(id) => {
+              const p = trendPeriods.find((t) => `${t.from}_${t.to}` === id);
+              if (p) go(p);
+            }}
+            tone={metric === 'time' ? 'time' : 'reps'}
+            format={(v) => formatChartValue(v, metric)}
+            label={texts.history.trend}
+          />
+        </div>
+        <p className="field__hint">
+          {texts.history.trendAverage(formatChartValue(Math.round(trendAvg * 10) / 10, metric))} ·{' '}
+          {texts.history.trendHint(TREND_COUNT[state.kind], texts.history.trendUnits[state.kind])}
+        </p>
+      </Section>
+
+      {isDay ? (
+        <div className="settings-group__actions">
+          <Button onClick={() => onOpenDay(period.from)} icon={<ChevronRight size={18} />}>
+            {texts.history.openInToday}
+          </Button>
+        </div>
+      ) : activeDays.length > 0 ? (
+        <Section title={texts.history.days} count={activeDays.length}>
+          <div className="list">
+            {activeDays.map((d) => (
+              <button
+                key={d.date}
+                type="button"
+                className="dayrow"
+                onClick={() => onOpenDay(d.date)}
+                aria-label={`${texts.history.openDay}: ${formatRelativeDay(d.date, today)}`}
+              >
+                <span className="dayrow__label">
+                  <span className="dayrow__name">{formatRelativeDay(d.date, today)}</span>
+                  <span className="dayrow__meta">
+                    {texts.today.session(d.sessions)} · {texts.history.entries(d.entries)}
+                  </span>
+                </span>
+                <span className="dayrow__value">
+                  {d.reps > 0 ? (
+                    <>
+                      {d.reps}
+                      <small>{texts.common.reps}</small>
+                    </>
+                  ) : null}
+                  {d.reps > 0 && d.seconds > 0 ? ' · ' : null}
+                  {d.seconds > 0 ? <span className="dayrow__value--time">{formatDuration(d.seconds)}</span> : null}
+                </span>
+                <ChevronRight size={18} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {current.entries === 0 ? <p className="field__hint">{texts.history.emptyPeriod}</p> : null}
+
+      {!filterExercise && perExercise.length > 0 ? (
+        <Section title={texts.history.byExercise} count={perExercise.length}>
+          <div className="card" style={{ padding: 'var(--space-1) var(--space-2)' }}>
+            {perExercise.map((row) => {
+              const ex = findExercise(data, row.exerciseId) ?? unknownExercise(row.exerciseId);
+              const prev = prevPerExercise.get(row.exerciseId);
+              const byTime = row.reps === 0 && row.seconds > 0;
+              const delta = formatDelta(deltaOf(byTime ? row.seconds : row.reps, byTime ? (prev?.seconds ?? 0) : (prev?.reps ?? 0)));
+              return (
+                <button key={row.exerciseId} type="button" className="entry" onClick={() => onOpenExercise(row.exerciseId)}>
+                  <span className="entry__emoji" aria-hidden="true">
+                    {ex.emoji || '🏃'}
+                  </span>
+                  <span className="entry__body">
+                    <span className="entry__name">{ex.name}</span>
+                    <span className="entry__meta">
+                      {texts.history.entries(row.entries)}
+                      {row.bestReps > 0 ? ` · ${texts.history.best} ${row.bestReps}` : ''}
+                      {row.bestSeconds > 0 ? ` · ${texts.history.best} ${formatDuration(row.bestSeconds)}` : ''}
+                      {delta ? <span className={`stat__delta stat__delta--${delta.tone}`}> · {delta.text}</span> : null}
                     </span>
                   </span>
-                  <span className="dayrow__value">
-                    {d.reps > 0 ? (
-                      <>
-                        {d.reps}
-                        <small>{texts.common.reps}</small>
-                      </>
-                    ) : null}
-                    {d.reps > 0 && d.seconds > 0 ? ' · ' : null}
-                    {d.seconds > 0 ? <span className="dayrow__value--time">{formatDuration(d.seconds)}</span> : null}
+                  <span className={`entry__amount${byTime ? ' entry__amount--time' : ''}`}>
+                    {byTime ? formatDuration(row.seconds) : row.reps}
+                    {!byTime ? <small>{texts.common.reps}</small> : null}
                   </span>
-                  <ChevronRight size={18} aria-hidden="true" />
                 </button>
-              ))}
-            </div>
-          </Section>
-          )}
+              );
+            })}
+          </div>
+        </Section>
+      ) : null}
 
-          {perExercise.length > 0 ? (
-            <Section title={texts.history.byExercise} count={perExercise.length}>
-              <div className="card" style={{ padding: 'var(--space-1) var(--space-2)' }}>
-                {perExercise.map((row) => {
-                  const ex = findExercise(data, row.exerciseId) ?? unknownExercise(row.exerciseId);
-                  return (
-                    <button key={row.exerciseId} type="button" className="entry" onClick={() => onOpenExercise(row.exerciseId)}>
-                      <span className="entry__emoji" aria-hidden="true">
-                        {ex.emoji || '🏃'}
-                      </span>
-                      <span className="entry__body">
-                        <span className="entry__name">{ex.name}</span>
-                        <span className="entry__meta">
-                          {texts.history.entries(row.entries)}
-                          {row.bestReps > 0 ? ` · ${texts.history.best} ${row.bestReps}` : ''}
-                          {row.bestSeconds > 0 ? ` · ${texts.history.best} ${formatDuration(row.bestSeconds)}` : ''}
-                        </span>
-                      </span>
-                      <span className={`entry__amount${row.reps === 0 && row.seconds > 0 ? ' entry__amount--time' : ''}`}>
-                        {row.reps > 0 ? row.reps : formatDuration(row.seconds)}
-                        {row.reps > 0 ? <small>{texts.common.reps}</small> : null}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </Section>
-          ) : null}
-        </>
-      )}
+      <Toggle checked={state.nerd} onChange={(nerd) => onChange({ nerd })} label={texts.history.nerdToggle} hint={texts.history.nerdHint} />
+      {state.nerd ? (
+        <NerdPanel
+          data={data}
+          filtered={filtered}
+          sessions={sessions}
+          range={comparison.current}
+          today={today}
+          metric={metric}
+          multiDay={!isDay}
+          filterName={filterExercise?.name ?? null}
+        />
+      ) : null}
     </div>
   );
 }
+

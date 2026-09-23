@@ -2,6 +2,8 @@ export interface Stat {
   label: string;
   value: string;
   tone?: 'accent' | 'time' | 'plain';
+  /** Change against a comparison period, e.g. "▲ 12%". */
+  delta?: { text: string; tone: 'up' | 'down' | 'flat' };
 }
 
 export function StatTiles({ stats }: { stats: Stat[] }) {
@@ -11,6 +13,7 @@ export function StatTiles({ stats }: { stats: Stat[] }) {
         <div key={s.label} className={`stat${s.tone && s.tone !== 'plain' ? ` stat--${s.tone}` : ''}`}>
           <span className="stat__label">{s.label}</span>
           <span className="stat__value">{s.value}</span>
+          {s.delta ? <span className={`stat__delta stat__delta--${s.delta.tone}`}>{s.delta.text}</span> : null}
         </div>
       ))}
     </div>

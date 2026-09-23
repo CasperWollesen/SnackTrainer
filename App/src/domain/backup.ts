@@ -1,5 +1,5 @@
 import { compareISO, isISODate, isLocalDateTime } from './dates';
-import { DATA_VERSION, DEFAULT_SETTINGS, type AppData, type Entry, type Exercise, type Session, type Settings } from './types';
+import { DATA_VERSION, DEFAULT_SETTINGS, type ActiveSession, type AppData, type Entry, type Exercise, type Session, type Settings } from './types';
 
 export const BACKUP_APP_ID = 'snacktrainer';
 export const BACKUP_FORMAT_VERSION = 1;
@@ -105,7 +105,12 @@ function validateSession(raw: unknown): Session | null {
     entries.push(entry);
   }
   entries.sort((a, b) => compareISO(a.at, b.at));
-  return { id: raw.id, date: raw.date, startedAt: raw.startedAt, entries };
+  const session: Session = { id: raw.id, date: raw.date, startedAt: raw.startedAt, entries };
+  if (raw.durationSeconds !== undefined) {
+    if (!isNonNegativeInt(raw.durationSeconds)) return null;
+    session.durationSeconds = raw.durationSeconds;
+  }
+  return session;
 }
 
 function validateExercise(raw: unknown): Exercise | null {
@@ -132,7 +137,19 @@ function validateSettings(raw: unknown): Settings {
   if (Array.isArray(raw.hiddenExerciseIds)) {
     s.hiddenExerciseIds = [...new Set(raw.hiddenExerciseIds.filter(isNonEmptyString))];
   }
+  if (typeof raw.sessionTimeoutMinutes === 'number' && raw.sessionTimeoutMinutes >= 1 && raw.sessionTimeoutMinutes <= 120) {
+    s.sessionTimeoutMinutes = Math.round(raw.sessionTimeoutMinutes);
+  }
   return s;
+}
+
+/** A running timer that cannot be read is dropped (null), never a reason to reject the data. */
+function validateActiveSession(raw: unknown): ActiveSession | null {
+  if (!isRecord(raw)) return null;
+  if (!isNonEmptyString(raw.id) || !isLocalDateTime(raw.startedAt)) return null;
+  const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+  if (!finite(raw.startedMs) || !finite(raw.lastActivityMs) || raw.lastActivityMs < raw.startedMs) return null;
+  return { id: raw.id, startedAt: raw.startedAt, startedMs: raw.startedMs, lastActivityMs: raw.lastActivityMs };
 }
 
 /**
@@ -147,6 +164,11 @@ export function upgradeAppData(raw: unknown): unknown {
     // 1 -> 2: settings.hiddenExerciseIds (nothing hidden).
     const settings = isRecord(data.settings) ? data.settings : {};
     data = { ...data, version: 2, settings: { ...settings, hiddenExerciseIds: [] } };
+  }
+  if (data.version === 2) {
+    // 2 -> 3: no running timer, default auto-stop; sessions simply have no durationSeconds.
+    const settings = isRecord(data.settings) ? data.settings : {};
+    data = { ...data, version: 3, activeSession: null, settings: { ...settings, sessionTimeoutMinutes: 5 } };
   }
   return data;
 }
@@ -174,5 +196,11 @@ export function validateAppData(raw: unknown): AppData | null {
       customExercises.push(ex);
     }
   }
-  return { version: DATA_VERSION, sessions, customExercises, settings: validateSettings(raw.settings) };
+  return {
+    version: DATA_VERSION,
+    sessions,
+    customExercises,
+    settings: validateSettings(raw.settings),
+    activeSession: validateActiveSession(raw.activeSession),
+  };
 }

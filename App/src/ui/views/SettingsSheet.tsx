@@ -7,7 +7,7 @@ import { repository } from '../../storage/repository';
 import { isStoragePersisted } from '../../storage/storage';
 import { APP_NAME, SHARE_URL, texts } from '../../texts';
 import { Button } from '../components/Button';
-import { Stepper } from '../components/FormFields';
+import { Field, Stepper } from '../components/FormFields';
 import { QrCode } from '../components/QrCode';
 import { Sheet } from '../components/Sheet';
 import { formatDateWithYear, formatTimestamp } from '../format';
@@ -145,15 +145,28 @@ export function SettingsSheet({ open, data, onClose, install, onDemo }: Settings
       <section className="settings-group">
         <h3 className="settings-group__title">{texts.settings.sessions.title}</h3>
         <p className="settings-group__text">{texts.settings.sessions.description}</p>
-        <Stepper
-          label={texts.settings.sessions.gapLabel}
-          value={data.settings.sessionGapMinutes}
-          min={5}
-          max={180}
-          step={5}
-          format={(v) => `${v} ${texts.settings.sessions.gapUnit}`}
-          onChange={(sessionGapMinutes) => repository.setSettings({ sessionGapMinutes })}
-        />
+        <Field label={texts.settings.sessions.gapLabel}>
+          <Stepper
+            label={texts.settings.sessions.gapLabel}
+            value={data.settings.sessionGapMinutes}
+            min={5}
+            max={180}
+            step={5}
+            format={(v) => `${v} ${texts.settings.sessions.gapUnit}`}
+            onChange={(sessionGapMinutes) => repository.setSettings({ sessionGapMinutes })}
+          />
+        </Field>
+        <Field label={texts.settings.sessions.timeoutLabel} hint={texts.settings.sessions.timeoutHint}>
+          <Stepper
+            label={texts.settings.sessions.timeoutLabel}
+            value={data.settings.sessionTimeoutMinutes}
+            min={1}
+            max={30}
+            step={1}
+            format={(v) => `${v} ${texts.settings.sessions.gapUnit}`}
+            onChange={(sessionTimeoutMinutes) => repository.setSettings({ sessionTimeoutMinutes })}
+          />
+        </Field>
       </section>
 
       <section className="settings-group">

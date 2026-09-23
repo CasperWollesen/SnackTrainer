@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r7`
+File revision: `2026_09_r8`
 Last reviewed: `2026-09-23`
 
 Related repositories (inspiration, not dependencies):
@@ -65,6 +65,14 @@ is less than the *session gap* (default 20 minutes, changeable in settings) old;
 session is created. Sessions are stored explicitly (not recomputed), so editing an entry's time later
 does not silently regroup history. Deleting the last entry of a session deletes the session.
 
+**Snack session timer (optional).** "Start snack session" on Today starts a timer that counts up in
+a bar on every tab (Log / Stop, what has been logged). While it runs, every entry on that day goes into
+that session regardless of the gap. Stop saves the session with its duration. After
+`sessionTimeoutMinutes` (default 5) without activity it stops by itself **at the last activity**, also
+when the app was closed. Logging, working in the log sheet and a running stopwatch count as
+activity; the last minute shows a "Keep going" warning. A timer with nothing logged leaves nothing
+behind. Stop and auto-stop have Undo (the timer runs on). The quick Log button is unchanged.
+
 ### Settings
 
 Install hint (iOS: Share → Add to Home Screen; Chromium: install prompt), session gap, export /
@@ -113,6 +121,14 @@ link button. Only the link is shared, never data.
     A running week or month is compared with the same number of days of the previous one, so a
     Wednesday does not look like a collapse against a full week. The view state lives in App so it
     survives a jump to Today and back; it is not persisted.
+13. **Timed sessions are explicit, quick logs stay implicit.** The timer lives in
+    `AppData.activeSession` (epoch ms for elapsed time and idle detection, local wall-clock start
+    for the session). The Session is only created on the first entry, so sessions are never empty.
+    A finished timed session carries `durationSeconds` and keeps its timer start as `startedAt`.
+    Auto-stop ends at the last activity so a forgotten Stop never inflates the time. Data version 3.
+14. **Stretching is a built-in category** (SnackTrainer's own, not from MuscleUp): a general
+    "Stretching" plus specific stretches, timed by default except the flowing ones (Cat-Cow, World's
+    Greatest Stretch).
 
 ## Data Model
 
@@ -141,17 +157,27 @@ interface Session {
   date: string;        // "YYYY-MM-DD" local
   startedAt: string;   // "YYYY-MM-DDTHH:MM" local
   entries: Entry[];    // sorted by `at`
+  durationSeconds?: number;  // v3: set on sessions run with the timer
+}
+
+interface ActiveSession {    // v3: the running timer
+  id: string;          // becomes the Session id on the first entry
+  startedAt: string;   // local wall-clock start
+  startedMs: number;   // epoch ms
+  lastActivityMs: number;
 }
 
 interface AppData {
-  version: 2;              // 1 -> 2 adds settings.hiddenExerciseIds
+  version: 3;              // 1 -> 2 hiddenExerciseIds; 2 -> 3 timer
   sessions: Session[];        // sorted by startedAt
   customExercises: Exercise[];
   settings: {
     sessionGapMinutes: number;
     installHintDismissed: boolean;
     hiddenExerciseIds: string[];   // added in version 2
+    sessionTimeoutMinutes: number; // added in version 3, default 5
   };
+  activeSession: ActiveSession | null;
 }
 ```
 
@@ -213,6 +239,12 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 - [x] History periods: day (default), current week, current month, rolling 7 / 31 days, step back in time
 - [x] Totals per period compared with the previous period, trend over recent periods, exercise filter
 - [x] Nerd view: averages, records, streaks, time of day, weekdays
+
+### Milestone 4 – Snack session timer and stretching
+
+- [x] Start / Stop a timed snack session, bar with timer on every tab, auto-stop at last activity
+- [x] Auto-stop minutes in Settings, duration on Today and in Nerd view, demo sessions with durations
+- [x] Stretching exercises (general and specific)
 
 ### Ideas parked (not planned)
 

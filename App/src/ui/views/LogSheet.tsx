@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { joinDateTime } from '../../domain/dates';
 import type { Amount, NewEntry } from '../../domain/sessions';
 import type { AppData, Exercise, ExerciseMode, ISODate, TimeString } from '../../domain/types';
@@ -21,6 +21,8 @@ export interface LogSheetProps {
   initialExercise: Exercise | null;
   onClose: () => void;
   onSave: (input: NewEntry) => void;
+  /** Called while the user works in the sheet (keeps a running session timer alive). */
+  onActivity?: () => void;
 }
 
 const MODE_OPTIONS: { value: ExerciseMode; label: string }[] = [
@@ -32,7 +34,7 @@ const MODE_OPTIONS: { value: ExerciseMode; label: string }[] = [
  * Two-step sheet: pick an exercise, then enter reps or time.
  * "Save & add another" keeps the sheet open and goes back to the picker.
  */
-export function LogSheet({ open, data, date, today, nowTime, initialExercise, onClose, onSave }: LogSheetProps) {
+export function LogSheet({ open, data, date, today, nowTime, initialExercise, onClose, onSave, onActivity }: LogSheetProps) {
   const [exercise, setExercise] = useState<Exercise | null>(initialExercise);
   const [mode, setMode] = useState<ExerciseMode>(initialExercise?.mode ?? 'reps');
   const [reps, setReps] = useState(0);
@@ -54,6 +56,13 @@ export function LogSheet({ open, data, date, today, nowTime, initialExercise, on
     // nowTime intentionally read only at open time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialExercise]);
+
+  // Picking, counting and a running stopwatch count as activity; the action throttles writes.
+  const onActivityRef = useRef(onActivity);
+  onActivityRef.current = onActivity;
+  useEffect(() => {
+    if (open) onActivityRef.current?.();
+  }, [open, exercise, mode, reps, seconds]);
 
   // Follow the clock while the user has not touched the time field.
   useEffect(() => {

@@ -72,5 +72,8 @@ describe('stats', () => {
     expect(n.busiestWeekday).toBe(1);
     expect(n.exercises).toBe(3);
     expect(nerdStats([]).biggestSession).toBeNull();
+    expect(n.timed).toEqual({ count: 0, totalSeconds: 0, averageSeconds: 0, longestSeconds: 0 });
+    const timed = sample().sessions.map((s, i) => (i < 2 ? { ...s, durationSeconds: (i + 1) * 300 } : s));
+    expect(nerdStats(timed).timed).toEqual({ count: 2, totalSeconds: 900, averageSeconds: 450, longestSeconds: 600 });
   });
 });

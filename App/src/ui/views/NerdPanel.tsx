@@ -58,6 +58,11 @@ export function NerdPanel({ data, filtered, sessions, range, today, metric, mult
     [t.busiestHour, n.busiestHour !== null ? hour(n.busiestHour) : t.none],
     ...(multiDay ? ([[t.busiestWeekday, n.busiestWeekday !== null ? (WEEKDAY_NAMES[n.busiestWeekday - 1] ?? '') : t.none]] as [string, string][]) : []),
     ...(filterName ? [] : ([[t.exercisesUsed, String(n.exercises)]] as [string, string][])),
+    [
+      t.timedSessions,
+      n.timed.count > 0 ? t.timedValue(n.timed.count, formatDuration(n.timed.averageSeconds), formatTotalTime(n.timed.totalSeconds)) : t.none,
+    ],
+    [t.longestSession, n.timed.count > 0 ? formatDuration(n.timed.longestSeconds) : t.none],
   ];
 
   const allTimeRows: [string, string][] = [

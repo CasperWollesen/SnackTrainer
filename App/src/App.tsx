@@ -9,10 +9,12 @@ import { texts } from './texts';
 import { Button, IconButton } from './ui/components/Button';
 import { Nav, type Tab } from './ui/components/Nav';
 import { Toast } from './ui/components/Toast';
+import { ActiveSessionBar } from './ui/components/ActiveSessionBar';
 import { UpdateBanner } from './ui/components/UpdateBanner';
 import { useAppData } from './ui/hooks/useAppData';
 import { useClock } from './ui/hooks/useClock';
 import { useInstallPrompt } from './ui/hooks/useInstallPrompt';
+import { useNow } from './ui/hooks/useNow';
 import { ToastProvider, useToast } from './ui/hooks/useToast';
 import { useActions } from './ui/useActions';
 import { EntrySheet } from './ui/views/EntrySheet';
@@ -70,6 +72,14 @@ function Shell() {
   }
 
   const closeOverlay = useCallback(() => setOverlay({ kind: 'none' }), []);
+
+  // Session timer: tick every second while it runs and stop it once it has been idle too long
+  // (also right after opening the app, when it may have been closed for a while).
+  const timerRunning = data.activeSession !== null;
+  const nowMs = useNow(timerRunning);
+  useEffect(() => {
+    if (timerRunning) actions.autoStopTimer();
+  }, [timerRunning, nowMs, actions]);
   const openEntry = data.sessions.length > 0 && overlay.kind === 'entry' ? (findEntry(data, overlay.entryId)?.entry ?? null) : null;
 
   const hasAnyData = data.sessions.length > 0;
@@ -145,14 +155,25 @@ function Shell() {
           </div>
         ) : null}
 
+        <ActiveSessionBar
+          data={data}
+          nowMs={nowMs}
+          onLog={() => {
+            setDate(today);
+            openLog(null);
+          }}
+          onStop={actions.stopTimer}
+          onKeepGoing={() => actions.touchTimer(true)}
+        />
+
         {tab === 'today' ? (
           <TodayView
             data={data}
             date={date}
             today={today}
             onChangeDate={setDate}
-            onLog={() => openLog(null)}
             onOpenEntry={(entry: Entry) => setOverlay({ kind: 'entry', entryId: entry.id })}
+            onStartSession={actions.startTimer}
           />
         ) : tab === 'history' ? (
           <HistoryView data={data} today={today} state={history} onChange={changeHistory} onOpenDay={openDay} onOpenExercise={openExercise} />
@@ -175,6 +196,7 @@ function Shell() {
         nowTime={nowTime}
         initialExercise={overlay.kind === 'log' ? overlay.exercise : null}
         onClose={closeOverlay}
+        onActivity={() => actions.touchTimer()}
         onSave={(input) => {
           actions.log(input);
           if (tab !== 'today') setTab('today');

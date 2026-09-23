@@ -117,7 +117,10 @@ export function generateDemoSessions(now: Date, days = 120, seed = 42): Session[
       }
       if (entries.length === 0) continue;
       entries.sort((a, b) => compareISO(a.at, b.at));
-      sessions.push({ id: id(), date, startedAt: entries[0]!.at, entries });
+      const session: Session = { id: id(), date, startedAt: entries[0]!.at, entries };
+      // Most demo sessions look like they were run with the session timer.
+      if (rand() < 0.7) session.durationSeconds = (entries.length - 1) * 120 + 60 + Math.floor(rand() * 240);
+      sessions.push(session);
       lastMinute = minute + entryCount * 2;
     }
   }

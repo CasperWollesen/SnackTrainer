@@ -20,6 +20,19 @@ function sortSessions(sessions: Session[]): Session[] {
   return [...sessions].sort((a, b) => compareISO(a.startedAt, b.startedAt));
 }
 
+/**
+ * A session's start after its entries changed: the first entry, except that a timed session
+ * (finished, or the running one) keeps its timer start unless an entry is earlier.
+ */
+function startOf(session: Session, timed: boolean): LocalDateTime {
+  const first = session.entries[0]!.at;
+  return timed && compareISO(session.startedAt, first) < 0 ? session.startedAt : first;
+}
+
+function isTimed(data: AppData, session: Session): boolean {
+  return session.durationSeconds !== undefined || data.activeSession?.id === session.id;
+}
+
 function makeEntry(input: NewEntry, id = newId()): Entry {
   const entry: Entry = { id, exerciseId: input.exerciseId, at: input.at };
   if ('reps' in input.amount) entry.reps = input.amount.reps;
@@ -54,9 +67,26 @@ export interface AddResult {
   createdSession: boolean;
 }
 
-/** Adds an entry, joining an existing session or creating a new one. Pure; returns new data. */
+/**
+ * Adds an entry, joining an existing session or creating a new one. Pure; returns new data.
+ * While a session timer runs, entries on its day go into that timed session instead of
+ * following the gap rule; the session is created on its first entry with the timer's start.
+ */
 export function addEntry(data: AppData, input: NewEntry): AddResult {
   const entry = makeEntry(input);
+  const active = data.activeSession;
+  if (active && dateOf(input.at) === dateOf(active.startedAt)) {
+    const existing = data.sessions.find((s) => s.id === active.id);
+    if (existing) {
+      const session: Session = { ...existing, entries: sortEntries([...existing.entries, entry]) };
+      session.startedAt = startOf(session, true);
+      const sessions = sortSessions(data.sessions.map((s) => (s.id === existing.id ? session : s)));
+      return { data: { ...data, sessions }, entry, session, createdSession: false };
+    }
+    const startedAt = compareISO(input.at, active.startedAt) < 0 ? input.at : active.startedAt;
+    const session: Session = { id: active.id, date: dateOf(startedAt), startedAt, entries: [entry] };
+    return { data: { ...data, sessions: sortSessions([...data.sessions, session]) }, entry, session, createdSession: true };
+  }
   const target = findSessionFor(data, input.at);
   if (target) {
     const session: Session = { ...target, entries: sortEntries([...target.entries, entry]) };
@@ -87,8 +117,8 @@ export function updateEntry(data: AppData, entryId: string, patch: { at?: LocalD
   if ('reps' in amount) next.reps = amount.reps;
   else next.seconds = amount.seconds;
   const entries = sortEntries(found.session.entries.map((e) => (e.id === entryId ? next : e)));
-  const first = entries[0]!;
-  const session: Session = { ...found.session, entries, startedAt: first.at, date: dateOf(first.at) };
+  const startedAt = startOf({ ...found.session, entries }, isTimed(data, found.session));
+  const session: Session = { ...found.session, entries, startedAt, date: dateOf(startedAt) };
   return { ...data, sessions: sortSessions(data.sessions.map((s) => (s.id === session.id ? session : s))) };
 }
 
@@ -100,8 +130,8 @@ export function deleteEntry(data: AppData, entryId: string): AppData {
   if (entries.length === 0) {
     return { ...data, sessions: data.sessions.filter((s) => s.id !== found.session.id) };
   }
-  const first = entries[0]!;
-  const session: Session = { ...found.session, entries, startedAt: first.at, date: dateOf(first.at) };
+  const startedAt = startOf({ ...found.session, entries }, isTimed(data, found.session));
+  const session: Session = { ...found.session, entries, startedAt, date: dateOf(startedAt) };
   return { ...data, sessions: sortSessions(data.sessions.map((s) => (s.id === session.id ? session : s))) };
 }
 
@@ -110,12 +140,14 @@ export function restoreEntry(data: AppData, session: Session, entry: Entry): App
   const existing = data.sessions.find((s) => s.id === session.id);
   if (existing) {
     const merged: Session = { ...existing, entries: sortEntries([...existing.entries.filter((e) => e.id !== entry.id), entry]) };
-    const first = merged.entries[0]!;
-    merged.startedAt = first.at;
-    merged.date = dateOf(first.at);
+    merged.startedAt = startOf(merged, isTimed(data, existing));
+    merged.date = dateOf(merged.startedAt);
     return { ...data, sessions: sortSessions(data.sessions.map((s) => (s.id === merged.id ? merged : s))) };
   }
-  const revived: Session = { id: session.id, date: dateOf(entry.at), startedAt: entry.at, entries: [entry] };
+  // Keep the session's other fields (a timed session keeps its duration and timer start).
+  const revived: Session = { ...session, entries: [entry] };
+  revived.startedAt = startOf(revived, isTimed(data, session));
+  revived.date = dateOf(revived.startedAt);
   return { ...data, sessions: sortSessions([...data.sessions, revived]) };
 }
 

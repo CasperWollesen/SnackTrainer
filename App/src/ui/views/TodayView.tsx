@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Plus, Zap } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Timer, Zap } from 'lucide-react';
 import { useMemo } from 'react';
 import { addDays, timeOf } from '../../domain/dates';
 import { isDemoId } from '../../domain/demo';
@@ -17,11 +17,11 @@ export interface TodayViewProps {
   date: ISODate;
   today: ISODate;
   onChangeDate: (date: ISODate) => void;
-  onLog: () => void;
   onOpenEntry: (entry: Entry) => void;
+  onStartSession: () => void;
 }
 
-export function TodayView({ data, date, today, onChangeDate, onLog, onOpenEntry }: TodayViewProps) {
+export function TodayView({ data, date, today, onChangeDate, onOpenEntry, onStartSession }: TodayViewProps) {
   const sessions = useMemo(() => sessionsOn(data, date), [data, date]);
   const totals = useMemo(() => totalsOf(sessions), [sessions]);
   const isToday = date === today;
@@ -54,12 +54,17 @@ export function TodayView({ data, date, today, onChangeDate, onLog, onOpenEntry 
         ]}
       />
 
-      {sessions.length === 0 ? (
-        <EmptyState icon={<Zap size={26} />} title={texts.today.emptyTitle} text={isToday ? texts.today.emptyText : texts.today.emptyPast}>
-          <Button variant="primary" icon={<Plus size={18} />} onClick={onLog}>
-            {texts.today.logFirst}
+      {isToday && !data.activeSession ? (
+        <div className="start-session">
+          <Button variant="primary" block icon={<Timer size={20} />} onClick={onStartSession}>
+            {texts.timer.start}
           </Button>
-        </EmptyState>
+          <p className="field__hint">{texts.timer.startHint}</p>
+        </div>
+      ) : null}
+
+      {sessions.length === 0 ? (
+        <EmptyState icon={<Zap size={26} />} title={texts.today.emptyTitle} text={isToday ? texts.today.emptyText : texts.today.emptyPast} />
       ) : (
         <Section title={texts.today.sessions} count={sessions.length}>
           <div className="list">
@@ -82,6 +87,14 @@ function SessionCard({ session, data, onOpenEntry }: { session: Session; data: A
           <Clock size={18} aria-hidden="true" />
           {timeOf(session.startedAt)}
           {isDemoId(session.id) ? <span className="tag">{texts.settings.demo.tag}</span> : null}
+          {data.activeSession?.id === session.id ? (
+            <span className="tag tag--time">{texts.timer.runningTag}</span>
+          ) : session.durationSeconds !== undefined ? (
+            <span className="tag tag--time" title={texts.timer.timed}>
+              <Timer size={12} aria-hidden="true" />
+              {formatDuration(session.durationSeconds)}
+            </span>
+          ) : null}
         </span>
         <span className="session__summary">
           {totals.reps > 0 ? <span>{`${totals.reps} ${texts.common.reps}`}</span> : null}

@@ -37,6 +37,25 @@ export interface Session {
   startedAt: LocalDateTime;
   /** Sorted by `at`. Never empty in stored data. */
   entries: Entry[];
+  /**
+   * Set when the session was run with the session timer and stopped: seconds from pressing
+   * Start to pressing Stop (or to the last activity when it stopped by itself).
+   * Also marks the session as timed: its startedAt stays at the timer start.
+   */
+  durationSeconds?: number;
+}
+
+/**
+ * A running session timer. The Session itself is created with this id on the first entry,
+ * so an empty timer never leaves an empty session behind.
+ */
+export interface ActiveSession {
+  id: string;
+  /** Local wall-clock start, used as the session's startedAt. */
+  startedAt: LocalDateTime;
+  /** Epoch milliseconds of the start and of the last activity (for the timer and auto-stop). */
+  startedMs: number;
+  lastActivityMs: number;
 }
 
 export interface Settings {
@@ -45,10 +64,15 @@ export interface Settings {
   installHintDismissed: boolean;
   /** Exercise ids left out of the pickers (built-in or custom). Their entries still count everywhere. */
   hiddenExerciseIds: string[];
+  /** A running session timer stops by itself after this many minutes without activity. */
+  sessionTimeoutMinutes: number;
 }
 
-/** 2: settings.hiddenExerciseIds added (v1 data is upgraded by `upgradeAppData`). */
-export const DATA_VERSION = 2;
+/**
+ * 2: settings.hiddenExerciseIds. 3: activeSession, Session.durationSeconds,
+ * settings.sessionTimeoutMinutes. Older data is upgraded by `upgradeAppData`.
+ */
+export const DATA_VERSION = 3;
 
 export interface AppData {
   version: typeof DATA_VERSION;
@@ -56,12 +80,15 @@ export interface AppData {
   sessions: Session[];
   customExercises: Exercise[];
   settings: Settings;
+  /** The running session timer, or null. */
+  activeSession: ActiveSession | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   sessionGapMinutes: 20,
   installHintDismissed: false,
   hiddenExerciseIds: [],
+  sessionTimeoutMinutes: 5,
 };
 
 export function emptyData(): AppData {
@@ -70,5 +97,6 @@ export function emptyData(): AppData {
     sessions: [],
     customExercises: [],
     settings: { ...DEFAULT_SETTINGS, hiddenExerciseIds: [] },
+    activeSession: null,
   };
 }

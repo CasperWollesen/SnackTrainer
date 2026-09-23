@@ -129,9 +129,17 @@ export interface NerdStats {
   /** ISO weekday with most reps (then sessions), or null without sessions. */
   busiestWeekday: number | null;
   exercises: number;
+  /** Sessions run with the session timer (they have a duration). */
+  timed: { count: number; totalSeconds: number; averageSeconds: number; longestSeconds: number };
 }
 
 const avg = (sum: number, n: number) => (n > 0 ? sum / n : 0);
+
+function timedStats(sessions: readonly Session[]): NerdStats['timed'] {
+  const durations = sessions.flatMap((s) => (s.durationSeconds !== undefined ? [s.durationSeconds] : []));
+  const total = durations.reduce((a, b) => a + b, 0);
+  return { count: durations.length, totalSeconds: total, averageSeconds: avg(total, durations.length), longestSeconds: Math.max(0, ...durations) };
+}
 
 export function nerdStats(sessions: readonly Session[]): NerdStats {
   const t = totalsOf(sessions);
@@ -191,5 +199,6 @@ export function nerdStats(sessions: readonly Session[]): NerdStats {
     busiestHour: top(hours, (b) => b.sessions),
     busiestWeekday: top(weekdays, (b) => b.reps * 1000 + b.sessions),
     exercises: exerciseTotals(sessions).length,
+    timed: timedStats(sessions),
   };
 }

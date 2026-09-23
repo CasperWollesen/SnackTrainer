@@ -1297,6 +1297,15 @@
   border-color: rgba(255, 154, 77, 0.35);
 }
 
+.banner--demo {
+  border-color: var(--time);
+  background: var(--time-soft);
+}
+
+.banner--demo .banner__icon {
+  color: var(--time);
+}
+
 .banner__icon {
   color: var(--accent);
   flex-shrink: 0;

@@ -1,6 +1,7 @@
-import { Check, CircleCheck, Copy, Download, Info, Share2, Smartphone, Trash, Upload } from 'lucide-react';
+import { Check, CircleCheck, Copy, Download, FlaskConical, Info, Share2, Smartphone, Trash, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createBackup, parseBackup, serializeBackup, type BackupError, type BackupSummary } from '../../domain/backup';
+import { demoEntryCount } from '../../domain/demo';
 import type { AppData } from '../../domain/types';
 import { repository } from '../../storage/repository';
 import { isStoragePersisted } from '../../storage/storage';
@@ -18,6 +19,8 @@ export interface SettingsSheetProps {
   data: AppData;
   onClose: () => void;
   install: InstallState;
+  /** Adds (true) or removes (false) demo data; the sheet closes so the Undo toast is reachable. */
+  onDemo: (on: boolean) => void;
 }
 
 type ImportState =
@@ -34,7 +37,7 @@ function backupFileName(now: Date): string {
   return `${APP_NAME.toLowerCase()}-backup-${stamp}.json`;
 }
 
-export function SettingsSheet({ open, data, onClose, install }: SettingsSheetProps) {
+export function SettingsSheet({ open, data, onClose, install, onDemo }: SettingsSheetProps) {
   const toast = useToast();
   const fileInput = useRef<HTMLInputElement>(null);
   const [importState, setImportState] = useState<ImportState>({ kind: 'idle' });
@@ -103,6 +106,8 @@ export function SettingsSheet({ open, data, onClose, install }: SettingsSheetPro
     toast.show({ message: texts.toast.imported });
     onClose();
   };
+
+  const demoCount = demoEntryCount(data);
 
   const deleteAll = () => {
     if (!window.confirm(texts.settings.danger.confirm)) return;
@@ -209,6 +214,21 @@ export function SettingsSheet({ open, data, onClose, install }: SettingsSheetPro
             </div>
           </div>
         ) : null}
+      </section>
+
+      <section className="settings-group">
+        <h3 className="settings-group__title">{texts.settings.demo.title}</h3>
+        <p className="settings-group__text">{texts.settings.demo.description}</p>
+        <div className="settings-group__actions">
+          <Button icon={<FlaskConical size={18} />} onClick={() => (onClose(), onDemo(true))}>
+            {demoCount > 0 ? texts.settings.demo.replace : texts.settings.demo.add}
+          </Button>
+          {demoCount > 0 ? (
+            <Button variant="ghost" icon={<Trash size={18} />} onClick={() => (onClose(), onDemo(false))}>
+              {texts.settings.demo.remove(demoCount)}
+            </Button>
+          ) : null}
+        </div>
       </section>
 
       <section className="settings-group">

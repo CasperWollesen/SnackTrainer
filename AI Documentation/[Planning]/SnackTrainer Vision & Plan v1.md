@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r4`
+File revision: `2026_09_r5`
 Last reviewed: `2026-09-23`
 
 Related repositories (inspiration, not dependencies):
@@ -65,7 +65,8 @@ does not silently regroup history. Deleting the last entry of a session deletes 
 ### Settings
 
 Install hint (iOS: Share → Add to Home Screen; Chromium: install prompt), session gap, export /
-import backup (JSON, validated, preview, replace-all), delete everything, about, and **Share**: a QR
+import backup (JSON, validated, preview, replace-all), **demo data** (add / refresh / remove),
+delete everything, about, and **Share**: a QR
 code for the public address (`https://CasperWollesen.github.io/SnackTrainer/`) plus a Share / Copy
 link button. Only the link is shared, never data.
 
@@ -100,6 +101,11 @@ link button. Only the link is shared, never data.
 10. **The share QR code is encoded in-house** (`domain/qr.ts`: byte mode, level L, versions 1–5)
     instead of adding a QR library, in the same spirit as the dependency-free icon script. It is
     rendered at runtime as SVG from `SHARE_URL` in `texts.ts`: works offline, one source of truth.
+11. **Demo data is marked by id prefix `demo-`** (sessions and entries), not by a data-model flag.
+    `removeDemoData` drops only demo entries; real entries never join a demo session
+    (`findSessionFor` skips them), so removal never splits real history. A banner and a "Demo" tag
+    on Today's sessions show when demo data is present. Add/remove use Undo, like everything else.
+    (The owner first dropped a dev-only `?demo` button, then asked for this in Settings.)
 
 ## Data Model
 
@@ -193,6 +199,13 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 - [x] Per-exercise page: history chart for one exercise, personal best per session
 - [x] Hide built-in exercises the owner never uses (one by one or "Hide N unused")
 - [x] Share QR code for the app's address in Settings
+
+### Milestone 3 – History periods and insight
+
+- [x] Demo data in Settings (add, refresh, remove; marked, banner)
+- [ ] History periods: day (default), current week, current month, rolling 7 / 31 days, step back in time
+- [ ] Totals per period compared with the previous period, trend over recent periods, exercise filter
+- [ ] Nerd view: averages, records, streaks, time of day, weekdays
 
 ### Ideas parked (not planned)
 

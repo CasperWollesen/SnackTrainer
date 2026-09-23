@@ -178,6 +178,8 @@ export const texts = {
     exported: 'Backup saved',
     imported: 'Backup imported',
     allDeleted: 'All data deleted',
+    demoAdded: 'Demo data added',
+    demoRemoved: 'Demo data removed',
     saveFailed: 'Could not save. Storage may be full or blocked.',
     corruptData: 'Stored data could not be read. Starting empty; the old data is kept until you save.',
   },
@@ -224,6 +226,18 @@ export const texts = {
         'invalid-data': 'The backup contains invalid data and was not imported.',
         'read-failed': 'The file could not be read.',
       } as Record<string, string>,
+    },
+    demo: {
+      title: 'Demo data',
+      description:
+        'Fills History with about four months of made-up snacks so you can see how it looks. Demo entries are marked and can be removed any time without touching your own.',
+      add: 'Add demo data',
+      replace: 'Refresh demo data',
+      remove: (n: number) => `Remove demo data (${n})`,
+      banner: 'Demo data is shown.',
+      bannerHint: 'It is marked and removed without touching your own entries.',
+      bannerRemove: 'Remove',
+      tag: 'Demo',
     },
     danger: {
       title: 'Delete everything',

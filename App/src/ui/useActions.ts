@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { removeDemoData, withDemoData } from '../domain/demo';
 import { findExercise, unknownExercise, withHidden } from '../domain/exercises';
 import { addEntry, deleteEntry, findEntry, restoreEntry, updateEntry, type Amount, type NewEntry } from '../domain/sessions';
 import type { Exercise, LocalDateTime } from '../domain/types';
@@ -92,8 +93,18 @@ export function useActions() {
     [afterWrite],
   );
 
+  /** Adds (or refreshes) demo data, or removes it. Undo puts the previous sessions back. */
+  const setDemo = useCallback(
+    (on: boolean) => {
+      const before = repository.get().sessions;
+      repository.update((d) => (on ? withDemoData(d, new Date()) : removeDemoData(d)));
+      afterWrite(on ? texts.toast.demoAdded : texts.toast.demoRemoved, () => repository.update((d) => ({ ...d, sessions: before })));
+    },
+    [afterWrite],
+  );
+
   return useMemo(
-    () => ({ log, edit, remove, saveExercise, deleteExercise, setHidden }),
-    [log, edit, remove, saveExercise, deleteExercise, setHidden],
+    () => ({ log, edit, remove, saveExercise, deleteExercise, setHidden, setDemo }),
+    [log, edit, remove, saveExercise, deleteExercise, setHidden, setDemo],
   );
 }

@@ -1,5 +1,6 @@
-import { Smartphone, X } from 'lucide-react';
+import { FlaskConical, Smartphone, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { hasDemoData } from './domain/demo';
 import { findEntry } from './domain/sessions';
 import { findExercise, isBuiltIn, unknownExercise } from './domain/exercises';
 import type { Entry, Exercise, ISODate } from './domain/types';
@@ -102,6 +103,21 @@ function Shell() {
           </div>
         ) : null}
 
+        {hasDemoData(data) ? (
+          <div className="banner banner--demo" style={{ marginBottom: 'var(--space-4)' }}>
+            <FlaskConical size={20} className="banner__icon" aria-hidden="true" />
+            <span className="banner__text">
+              <strong>{texts.settings.demo.banner}</strong>
+              {texts.settings.demo.bannerHint}
+            </span>
+            <span className="banner__actions">
+              <Button size="sm" onClick={() => actions.setDemo(false)}>
+                {texts.settings.demo.bannerRemove}
+              </Button>
+            </span>
+          </div>
+        ) : null}
+
         {tab === 'today' ? (
           <TodayView
             data={data}
@@ -169,7 +185,7 @@ function Shell() {
         onDelete={actions.deleteExercise}
       />
 
-      <SettingsSheet open={overlay.kind === 'settings'} data={data} onClose={closeOverlay} install={install} />
+      <SettingsSheet open={overlay.kind === 'settings'} data={data} onClose={closeOverlay} install={install} onDemo={actions.setDemo} />
     </div>
   );
 }

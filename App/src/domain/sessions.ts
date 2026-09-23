@@ -1,4 +1,5 @@
 import { addDays, compareISO, dateOf, eachDay, minutesBetween, startOfWeek } from './dates';
+import { isDemoId } from './demo';
 import { newId } from './ids';
 import type { AppData, Entry, ISODate, LocalDateTime, Session } from './types';
 
@@ -32,13 +33,14 @@ export function sessionEndsAt(session: Session): LocalDateTime {
 }
 
 /**
- * Picks the session a new entry at `at` should join: the latest session of that day whose
- * last entry is at most `gapMinutes` before `at` (and which does not start after `at`).
+ * Picks the session a new entry at `at` should join: the latest non-demo session of that day
+ * whose last entry is at most `gapMinutes` before `at` (and which does not start after `at`).
  * Returns null when a new session is needed.
  */
 export function findSessionFor(data: AppData, at: LocalDateTime, gapMinutes = data.settings.sessionGapMinutes): Session | null {
   const date = dateOf(at);
-  const candidates = data.sessions.filter((s) => s.date === date && compareISO(s.startedAt, at) <= 0);
+  // Demo sessions are never joined, so removing demo data never splits a real session.
+  const candidates = data.sessions.filter((s) => s.date === date && compareISO(s.startedAt, at) <= 0 && !isDemoId(s.id));
   const last = candidates[candidates.length - 1];
   if (!last) return null;
   const gap = minutesBetween(sessionEndsAt(last), at);

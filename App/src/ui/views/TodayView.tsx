@@ -1,6 +1,7 @@
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, Plus, Zap } from 'lucide-react';
 import { useMemo } from 'react';
 import { addDays, timeOf } from '../../domain/dates';
+import { isDemoId } from '../../domain/demo';
 import { findExercise, unknownExercise } from '../../domain/exercises';
 import { sessionsOn, totalsOf } from '../../domain/sessions';
 import type { AppData, Entry, ISODate, Session } from '../../domain/types';
@@ -80,6 +81,7 @@ function SessionCard({ session, data, onOpenEntry }: { session: Session; data: A
         <span className="session__time">
           <Clock size={18} aria-hidden="true" />
           {timeOf(session.startedAt)}
+          {isDemoId(session.id) ? <span className="tag">{texts.settings.demo.tag}</span> : null}
         </span>
         <span className="session__summary">
           {totals.reps > 0 ? <span>{`${totals.reps} ${texts.common.reps}`}</span> : null}

@@ -3,7 +3,7 @@ import type { AppData, Exercise, ExerciseMode } from './types';
 export const CUSTOM_CATEGORY = 'Custom';
 
 /** Category order for grouped lists. Custom categories sort after these, alphabetically. */
-export const CATEGORY_ORDER = ['Legs', 'Glutes', 'Back', 'Chest', 'Shoulders', 'Arms', 'Core', 'Full Body', CUSTOM_CATEGORY];
+export const CATEGORY_ORDER = ['Legs', 'Glutes', 'Back', 'Chest', 'Shoulders', 'Arms', 'Core', 'Full Body', 'Stretching', CUSTOM_CATEGORY];
 
 type Row = [id: string, name: string, emoji: string, category: string, bodyweight: boolean, mode?: ExerciseMode];
 
@@ -11,6 +11,8 @@ type Row = [id: string, name: string, emoji: string, category: string, bodyweigh
  * The exercises SnackTrainer ships with. Copied from MuscleUp's ExerciseCatalog.cs
  * (name, emoji, category, MovesBodyweight) without the webcam rep-counting config.
  * "Any Exercise (Auto)" is left out: it only made sense for the Rep Cam.
+ * The Stretching group is SnackTrainer's own addition. Never rename or reuse an id:
+ * logged entries and hidden lists refer to it.
  */
 const ROWS: Row[] = [
   // Legs
@@ -78,6 +80,25 @@ const ROWS: Row[] = [
   ['snatch', 'Snatch', '⚡', 'Full Body', false],
   ['box-jump', 'Box Jump', '📦', 'Full Body', true],
   ['jumping-jack', 'Jumping Jack', '⭐', 'Full Body', true],
+  // Stretching (SnackTrainer's own, not from MuscleUp). Held stretches are timed by default.
+  ['stretching', 'Stretching (general)', '🧘', 'Stretching', true, 'time'],
+  ['neck-stretch', 'Neck Stretch', '🦒', 'Stretching', true, 'time'],
+  ['shoulder-stretch', 'Shoulder Stretch (cross-body)', '🤗', 'Stretching', true, 'time'],
+  ['chest-doorway-stretch', 'Chest Doorway Stretch', '🚪', 'Stretching', true, 'time'],
+  ['triceps-stretch', 'Triceps Stretch', '🙋', 'Stretching', true, 'time'],
+  ['wrist-stretch', 'Wrist Stretch', '✋', 'Stretching', true, 'time'],
+  ['cat-cow', 'Cat-Cow', '🐈', 'Stretching', true],
+  ['childs-pose', "Child's Pose", '🙇', 'Stretching', true, 'time'],
+  ['cobra-stretch', 'Cobra Stretch', '🐍', 'Stretching', true, 'time'],
+  ['downward-dog', 'Downward Dog', '🐕', 'Stretching', true, 'time'],
+  ['seated-spinal-twist', 'Seated Spinal Twist', '🔄', 'Stretching', true, 'time'],
+  ['hip-flexor-stretch', 'Hip Flexor Stretch', '🏹', 'Stretching', true, 'time'],
+  ['pigeon-pose', 'Pigeon Pose', '🕊️', 'Stretching', true, 'time'],
+  ['hamstring-stretch', 'Hamstring Stretch', '🦵', 'Stretching', true, 'time'],
+  ['quad-stretch', 'Quad Stretch', '🦩', 'Stretching', true, 'time'],
+  ['calf-stretch', 'Calf Stretch', '🧱', 'Stretching', true, 'time'],
+  ['butterfly-stretch', 'Butterfly Stretch', '🦋', 'Stretching', true, 'time'],
+  ['worlds-greatest-stretch', "World's Greatest Stretch", '🌍', 'Stretching', true],
 ];
 
 export const BUILT_IN_EXERCISES: readonly Exercise[] = ROWS.map(([id, name, emoji, category, bodyweight, mode]) => ({

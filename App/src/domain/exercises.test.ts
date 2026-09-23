@@ -13,10 +13,10 @@ import { addEntry } from './sessions';
 import { emptyData } from './types';
 
 describe('exercise catalogue', () => {
-  it('has unique ids and exactly one time exercise by default', () => {
+  it('has unique ids and, outside Stretching, only Plank timed by default', () => {
     const ids = new Set(BUILT_IN_EXERCISES.map((e) => e.id));
     expect(ids.size).toBe(BUILT_IN_EXERCISES.length);
-    expect(BUILT_IN_EXERCISES.filter((e) => e.mode === 'time').map((e) => e.id)).toEqual(['plank']);
+    expect(BUILT_IN_EXERCISES.filter((e) => e.mode === 'time' && e.category !== 'Stretching').map((e) => e.id)).toEqual(['plank']);
   });
 
   it('searches ignoring case and punctuation', () => {
@@ -42,6 +42,14 @@ describe('exercise catalogue', () => {
       { id: 's', name: 'S', emoji: '', category: 'Legs', mode: 'reps', bodyweight: true },
     ]);
     expect(groups.map((g) => g.category)).toEqual(['Legs', 'Chest', 'Custom']);
+  });
+
+  it('has a Stretching group that defaults to time', () => {
+    const stretches = BUILT_IN_EXERCISES.filter((e) => e.category === 'Stretching');
+    expect(stretches.length).toBeGreaterThanOrEqual(15);
+    expect(stretches.find((e) => e.id === 'hamstring-stretch')?.mode).toBe('time');
+    expect(searchExercises(BUILT_IN_EXERCISES, 'stretch').length).toBeGreaterThanOrEqual(10);
+    expect(groupByCategory(stretches).map((g) => g.category)).toEqual(['Stretching']);
   });
 
   it('hides and shows exercises', () => {

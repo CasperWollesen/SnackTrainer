@@ -68,7 +68,10 @@ export function Stopwatch({ value, onChange }: StopwatchProps) {
   return (
     <div className="stopwatch" role="group" aria-label={texts.log.stopwatch}>
       <div className={`stopwatch__display${running ? ' stopwatch__display--running' : ''}`} aria-live="off">
-        {formatDuration(value)}
+        {/* Only the dot pulses: animating the changing digits themselves made mobile browsers
+            show the first frame ("0:00") ghosting behind them. */}
+        <span className="stopwatch__dot" aria-hidden="true" />
+        <span>{formatDuration(value)}</span>
       </div>
       <div className="stopwatch__controls">
         {running ? (

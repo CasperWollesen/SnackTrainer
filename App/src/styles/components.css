@@ -657,13 +657,29 @@
   padding: var(--space-3) 0;
 }
 
-.stopwatch__display--running {
+.stopwatch__display {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Running indicator. Never animate the digits themselves (see Stopwatch.tsx). */
+.stopwatch__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--time);
+  visibility: hidden;
+}
+
+.stopwatch__display--running .stopwatch__dot {
+  visibility: visible;
   animation: pulse 1s ease-in-out infinite;
 }
 
 @keyframes pulse {
   50% {
-    opacity: 0.75;
+    opacity: 0.25;
   }
 }
 

@@ -1,4 +1,4 @@
-import { FlaskConical, Smartphone, X } from 'lucide-react';
+import { Dumbbell, FlaskConical, Settings, Smartphone, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { hasDemoData } from './domain/demo';
 import { findEntry } from './domain/sessions';
@@ -21,6 +21,7 @@ import { ExerciseSheet } from './ui/views/ExerciseSheet';
 import { ExercisesView } from './ui/views/ExercisesView';
 import { HistoryView, initialHistoryState, type HistoryState } from './ui/views/HistoryView';
 import { LogSheet } from './ui/views/LogSheet';
+import { MenuSheet, type MenuItem } from './ui/views/MenuSheet';
 import { SettingsSheet } from './ui/views/SettingsSheet';
 import { TodayView } from './ui/views/TodayView';
 
@@ -30,7 +31,8 @@ type Overlay =
   | { kind: 'entry'; entryId: string }
   | { kind: 'exercise'; exercise: Exercise | null }
   | { kind: 'exerciseInfo'; exerciseId: string }
-  | { kind: 'settings' };
+  | { kind: 'settings' }
+  | { kind: 'menu' };
 
 export function App() {
   return (
@@ -84,9 +86,31 @@ function Shell() {
   const infoExercise =
     overlay.kind === 'exerciseInfo' ? (findExercise(data, overlay.exerciseId) ?? unknownExercise(overlay.exerciseId)) : null;
 
+  // The phone menu. Add a destination here; the tab bar stays Today · History · Menu.
+  const menuItems: MenuItem[] = [
+    {
+      id: 'exercises',
+      label: texts.tabs.exercises,
+      hint: texts.nav.exercisesHint,
+      icon: Dumbbell,
+      current: tab === 'exercises',
+      onSelect: () => {
+        setTab('exercises');
+        closeOverlay();
+      },
+    },
+    { id: 'settings', label: texts.settings.title, hint: texts.nav.settingsHint, icon: Settings, onSelect: () => setOverlay({ kind: 'settings' }) },
+  ];
+
   return (
     <div className="app">
-      <Nav active={tab} onChange={setTab} onLog={() => openLog(null)} onSettings={() => setOverlay({ kind: 'settings' })} />
+      <Nav
+        active={tab}
+        onChange={setTab}
+        onLog={() => openLog(null)}
+        onSettings={() => setOverlay({ kind: 'settings' })}
+        onMenu={() => setOverlay({ kind: 'menu' })}
+      />
 
       <main className="app__main">
         <UpdateBanner suppressed={overlay.kind !== 'none'} />
@@ -187,6 +211,8 @@ function Shell() {
         onSave={actions.saveExercise}
         onDelete={actions.deleteExercise}
       />
+
+      <MenuSheet open={overlay.kind === 'menu'} items={menuItems} onClose={closeOverlay} />
 
       <SettingsSheet open={overlay.kind === 'settings'} data={data} onClose={closeOverlay} install={install} onDemo={actions.setDemo} />
     </div>

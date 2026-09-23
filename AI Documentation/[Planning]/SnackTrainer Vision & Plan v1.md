@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r6`
+File revision: `2026_09_r7`
 Last reviewed: `2026-09-23`
 
 Related repositories (inspiration, not dependencies):
@@ -42,7 +42,10 @@ counting, weights, social features, streak gamification.
 
 **Hidden exercises** are left out of the pickers and Recent; a search still finds them under a "Hidden" group. Their entries count everywhere as before.
 
-A floating **Log** button is always present on phones (sidebar button on desktop).
+Phones have a bottom bar with **Today · History · Menu**. Menu opens a sheet listing the other
+destinations (Exercises, Settings); new ones are added to `menuItems` in `App.tsx` without touching
+the bar. Desktop has a sidebar with every destination. A floating **Log** button is always present on
+phones (sidebar button on desktop).
 
 ### Logging flow
 

@@ -34,7 +34,12 @@ export const texts = {
     minutes: 'min',
     loading: 'Loading…',
   },
-  nav: { mainMenu: 'Main menu' },
+  nav: {
+    mainMenu: 'Main menu',
+    menu: 'Menu',
+    exercisesHint: 'Catalogue, your own exercises, hidden ones',
+    settingsHint: 'Backup, demo data, sharing, install',
+  },
   tabs: { today: 'Today', history: 'History', exercises: 'Exercises' },
   add: { log: 'Log' },
   relative: { today: 'Today', yesterday: 'Yesterday', tomorrow: 'Tomorrow' },

@@ -1,7 +1,7 @@
 # App Shell, Storage and Logging (SnackTrainer v0.1)
 
 Documentation ID: `APP-SHELL-STORAGE-LOGGING`
-File revision: `2026_09_r2`
+File revision: `2026_09_r3`
 Last reviewed: `2026-09-23`
 
 Related code:
@@ -94,9 +94,15 @@ and totals.
 behaviour of the built service worker, GitHub Pages deployment (repository Pages source must be
 set to GitHub Actions first), backup import via the file picker (export/parse is unit-tested).
 
+## Navigation (phones)
+
+`Nav.tsx` shows Today and History in the bottom bar (`PHONE_TABS`) plus a Menu button. The
+Menu button is marked current while a menu tab (Exercises) is shown. It opens `MenuSheet` with
+`menuItems` from `App.tsx`. Before 2026-09-23 Settings was reachable on phones only from the
+dismissible install banner; the menu fixes that. Desktop keeps the full sidebar.
+
 ## Open Items / Deliberately Not Done
 
-- No demo-data button (dropped from the plan); test data is injected through the console.
 - The native `<input type="time">` follows the browser locale (12-hour in en-US browsers).
 
 ## Maintenance Notes

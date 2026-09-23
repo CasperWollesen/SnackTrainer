@@ -1,4 +1,4 @@
-import { BarChart3, Dumbbell, Plus, Settings, Sun, Zap } from 'lucide-react';
+import { BarChart3, Dumbbell, Menu, Plus, Settings, Sun, Zap } from 'lucide-react';
 import { texts } from '../../texts';
 
 export type Tab = 'today' | 'history' | 'exercises';
@@ -8,6 +8,8 @@ export interface NavProps {
   onChange: (tab: Tab) => void;
   onLog: () => void;
   onSettings: () => void;
+  /** Opens the phone menu sheet (Exercises, Settings, …). */
+  onMenu: () => void;
 }
 
 const TABS: { id: Tab; label: string; icon: typeof Sun }[] = [
@@ -16,8 +18,15 @@ const TABS: { id: Tab; label: string; icon: typeof Sun }[] = [
   { id: 'exercises', label: texts.tabs.exercises, icon: Dumbbell },
 ];
 
-/** Bottom tab bar on phones and sidebar on desktop (CSS decides which shows). */
-export function Nav({ active, onChange, onLog, onSettings }: NavProps) {
+/** Tabs that get their own slot in the phone tab bar; the rest live in the menu sheet. */
+const PHONE_TABS: Tab[] = ['today', 'history'];
+
+/**
+ * Sidebar on desktop with every destination; on phones a bottom bar with the main tabs and a
+ * Menu button (CSS decides which shows). The menu's items are defined in App (MenuSheet).
+ */
+export function Nav({ active, onChange, onLog, onSettings, onMenu }: NavProps) {
+  const inMenu = !PHONE_TABS.includes(active);
   return (
     <>
       <aside className="sidebar">
@@ -53,7 +62,7 @@ export function Nav({ active, onChange, onLog, onSettings }: NavProps) {
 
       <nav className="tabbar" aria-label={texts.nav.mainMenu}>
         <div className="tabbar__inner">
-          {TABS.map(({ id, label, icon: Icon }) => (
+          {TABS.filter((t) => PHONE_TABS.includes(t.id)).map(({ id, label, icon: Icon }) => (
             <button key={id} type="button" className="tabbar__item" aria-current={active === id ? 'page' : undefined} onClick={() => onChange(id)}>
               <span className="tabbar__icon">
                 <Icon size={22} aria-hidden="true" />
@@ -61,11 +70,11 @@ export function Nav({ active, onChange, onLog, onSettings }: NavProps) {
               {label}
             </button>
           ))}
-          <button type="button" className="tabbar__item" onClick={onSettings}>
+          <button type="button" className="tabbar__item" aria-current={inMenu ? 'page' : undefined} aria-haspopup="dialog" onClick={onMenu}>
             <span className="tabbar__icon">
-              <Settings size={22} aria-hidden="true" />
+              <Menu size={22} aria-hidden="true" />
             </span>
-            {texts.settings.title}
+            {texts.nav.menu}
           </button>
         </div>
       </nav>

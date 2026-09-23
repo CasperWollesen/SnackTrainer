@@ -296,8 +296,8 @@
 
 .tabbar__inner {
   display: grid;
-  /* Three tabs plus Settings (a sheet, not a tab; the sidebar has its own button on wide screens). */
-  grid-template-columns: repeat(4, 1fr);
+  /* Today, History and Menu (MenuSheet holds the rest; the sidebar lists everything on wide screens). */
+  grid-template-columns: repeat(3, 1fr);
   width: 100%;
   max-width: var(--content-max);
   height: var(--tabbar-h);
@@ -337,6 +337,28 @@
 
 .tabbar__item[aria-current='page'] .tabbar__icon {
   background: var(--accent-soft);
+}
+
+/* Menu sheet rows (MenuSheet) ------------------------------------------- */
+.menu-item__label {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.menu-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.menu-item[aria-current='page'] {
+  border-color: var(--accent);
+}
+
+.menu-item[aria-current='page'] svg:first-child {
+  color: var(--accent);
 }
 
 /* Floating log button ----------------------------------------------------- */

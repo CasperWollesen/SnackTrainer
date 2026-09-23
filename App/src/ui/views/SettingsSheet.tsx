@@ -1,12 +1,13 @@
-import { CircleCheck, Download, Info, Smartphone, Trash, Upload } from 'lucide-react';
+import { Check, CircleCheck, Copy, Download, Info, Share2, Smartphone, Trash, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createBackup, parseBackup, serializeBackup, type BackupError, type BackupSummary } from '../../domain/backup';
 import type { AppData } from '../../domain/types';
 import { repository } from '../../storage/repository';
 import { isStoragePersisted } from '../../storage/storage';
-import { APP_NAME, texts } from '../../texts';
+import { APP_NAME, SHARE_URL, texts } from '../../texts';
 import { Button } from '../components/Button';
 import { Stepper } from '../components/FormFields';
+import { QrCode } from '../components/QrCode';
 import { Sheet } from '../components/Sheet';
 import { formatDateWithYear, formatTimestamp } from '../format';
 import type { InstallState } from '../hooks/useInstallPrompt';
@@ -231,6 +232,61 @@ export function SettingsSheet({ open, data, onClose, install }: SettingsSheetPro
           </span>
         </div>
       </section>
+
+      <ShareGroup />
     </Sheet>
+  );
+}
+
+type CopyState = 'idle' | 'copied' | 'failed';
+
+/** QR code and link for the deployed app. Uses the system share sheet where there is one. */
+function ShareGroup() {
+  const [copy, setCopy] = useState<CopyState>('idle');
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  useEffect(() => {
+    if (copy === 'idle') return;
+    const id = window.setTimeout(() => setCopy('idle'), 2500);
+    return () => window.clearTimeout(id);
+  }, [copy]);
+
+  const share = async () => {
+    if (canShare) {
+      try {
+        await navigator.share({ title: APP_NAME, text: texts.app.tagline, url: SHARE_URL });
+      } catch {
+        // Cancelled by the user, or refused: nothing to report.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(SHARE_URL);
+      setCopy('copied');
+    } catch {
+      setCopy('failed');
+    }
+  };
+
+  return (
+    <section className="settings-group">
+      <h3 className="settings-group__title">{texts.settings.share.title}</h3>
+      <p className="settings-group__text">{texts.settings.share.description}</p>
+      <div className="share">
+        <QrCode text={SHARE_URL} label={texts.settings.share.qrLabel(SHARE_URL)} />
+        <a className="share__url" href={SHARE_URL} target="_blank" rel="noreferrer">
+          {SHARE_URL.replace(/^https:\/\//, '').replace(/\/$/, '')}
+        </a>
+      </div>
+      <div className="settings-group__actions">
+        <Button
+          icon={canShare ? <Share2 size={18} /> : copy === 'copied' ? <Check size={18} /> : <Copy size={18} />}
+          onClick={() => void share()}
+        >
+          {canShare ? texts.settings.share.button : copy === 'copied' ? texts.settings.share.copied : texts.settings.share.copy}
+        </Button>
+      </div>
+      {copy === 'failed' ? <p className="field__hint">{texts.settings.share.copyFailed}</p> : null}
+    </section>
   );
 }

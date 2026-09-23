@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r3`
+File revision: `2026_09_r4`
 Last reviewed: `2026-09-23`
 
 Related repositories (inspiration, not dependencies):
@@ -65,7 +65,9 @@ does not silently regroup history. Deleting the last entry of a session deletes 
 ### Settings
 
 Install hint (iOS: Share → Add to Home Screen; Chromium: install prompt), session gap, export /
-import backup (JSON, validated, preview, replace-all), delete everything, about.
+import backup (JSON, validated, preview, replace-all), delete everything, about, and **Share**: a QR
+code for the public address (`https://CasperWollesen.github.io/SnackTrainer/`) plus a Share / Copy
+link button. Only the link is shared, never data.
 
 ## Key Decisions
 
@@ -95,6 +97,9 @@ import backup (JSON, validated, preview, replace-all), delete everything, about.
    import upgrade old data identically.
 9. **The Exercises tab opens the exercise page, not the log sheet.** Logging from there costs one more
    tap (page → Log); the Log button stays one tap from everywhere.
+10. **The share QR code is encoded in-house** (`domain/qr.ts`: byte mode, level L, versions 1–5)
+    instead of adding a QR library, in the same spirit as the dependency-free icon script. It is
+    rendered at runtime as SVG from `SHARE_URL` in `texts.ts`: works offline, one source of truth.
 
 ## Data Model
 
@@ -187,6 +192,7 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 - [x] Weekly view in History (group by ISO week)
 - [x] Per-exercise page: history chart for one exercise, personal best per session
 - [x] Hide built-in exercises the owner never uses (one by one or "Hide N unused")
+- [x] Share QR code for the app's address in Settings
 
 ### Ideas parked (not planned)
 

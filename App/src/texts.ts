@@ -4,6 +4,9 @@
  */
 export const APP_NAME = 'SnackTrainer';
 
+/** Public address of the deployed app, shown as a QR code in Settings → Share. */
+export const SHARE_URL = 'https://CasperWollesen.github.io/SnackTrainer/';
+
 export const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
 export const WEEKDAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 export const MONTH_NAMES = [
@@ -232,6 +235,15 @@ export const texts = {
       title: 'About',
       version: (v: string) => `Version ${v}`,
       offline: 'No account, no server. Data lives in this browser only.',
+    },
+    share: {
+      title: 'Share',
+      description: 'Let someone scan this code to open SnackTrainer on their phone. Only the link is shared, never your data.',
+      qrLabel: (url: string) => `QR code for ${url}`,
+      button: 'Share link',
+      copy: 'Copy link',
+      copied: 'Link copied',
+      copyFailed: 'Could not copy. Select the address above instead.',
     },
   },
 } as const;

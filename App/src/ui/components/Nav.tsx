@@ -61,6 +61,12 @@ export function Nav({ active, onChange, onLog, onSettings }: NavProps) {
               {label}
             </button>
           ))}
+          <button type="button" className="tabbar__item" onClick={onSettings}>
+            <span className="tabbar__icon">
+              <Settings size={22} aria-hidden="true" />
+            </span>
+            {texts.settings.title}
+          </button>
         </div>
       </nav>
     </>

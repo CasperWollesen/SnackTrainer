@@ -296,7 +296,8 @@
 
 .tabbar__inner {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Three tabs plus Settings (a sheet, not a tab; the sidebar has its own button on wide screens). */
+  grid-template-columns: repeat(4, 1fr);
   width: 100%;
   max-width: var(--content-max);
   height: var(--tabbar-h);

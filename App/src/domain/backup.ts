@@ -58,7 +58,7 @@ export function parseBackup(text: string): ParseResult {
   if (raw.formatVersion !== BACKUP_FORMAT_VERSION) {
     return { ok: false, error: 'unsupported-version' };
   }
-  const data = validateAppData(raw.data);
+  const data = validateAppData(upgradeAppData(raw.data));
   if (!data) return { ok: false, error: 'invalid-data' };
   const exportedAt = typeof raw.exportedAt === 'string' ? raw.exportedAt : null;
   return { ok: true, data, summary: summarize(data, exportedAt) };
@@ -123,13 +123,32 @@ function validateExercise(raw: unknown): Exercise | null {
 }
 
 function validateSettings(raw: unknown): Settings {
-  const s: Settings = { ...DEFAULT_SETTINGS };
+  const s: Settings = { ...DEFAULT_SETTINGS, hiddenExerciseIds: [] };
   if (!isRecord(raw)) return s;
   if (typeof raw.sessionGapMinutes === 'number' && raw.sessionGapMinutes >= 0 && raw.sessionGapMinutes <= 24 * 60) {
     s.sessionGapMinutes = Math.round(raw.sessionGapMinutes);
   }
   if (typeof raw.installHintDismissed === 'boolean') s.installHintDismissed = raw.installHintDismissed;
+  if (Array.isArray(raw.hiddenExerciseIds)) {
+    s.hiddenExerciseIds = [...new Set(raw.hiddenExerciseIds.filter(isNonEmptyString))];
+  }
   return s;
+}
+
+/**
+ * Brings an older stored/backed-up AppData shape up to DATA_VERSION, one step at a time.
+ * Returns the input unchanged when it is not a known older version; validateAppData
+ * then accepts or rejects it. Used by the repository (localStorage) and by backup import.
+ */
+export function upgradeAppData(raw: unknown): unknown {
+  if (!isRecord(raw)) return raw;
+  let data: Record<string, unknown> = raw;
+  if (data.version === 1) {
+    // 1 -> 2: settings.hiddenExerciseIds (nothing hidden).
+    const settings = isRecord(data.settings) ? data.settings : {};
+    data = { ...data, version: 2, settings: { ...settings, hiddenExerciseIds: [] } };
+  }
+  return data;
 }
 
 /** Returns a clean AppData or null when the structure is unusable. */

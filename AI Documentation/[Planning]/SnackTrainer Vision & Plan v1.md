@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r2`
+File revision: `2026_09_r3`
 Last reviewed: `2026-09-23`
 
 Related repositories (inspiration, not dependencies):
@@ -35,8 +35,12 @@ counting, weights, social features, streak gamification.
 | Tab | What it shows |
 |---|---|
 | **Today** | The selected day (default today) with ← / → to step back and forth. Stat tiles (reps, time, sessions) and the list of sessions, each with its clock time and the entries logged in it ("07:30 · 20 Push-Up"). Tap an entry to edit or delete it. |
-| **History** | Group by **Days** (14 days / 4 weeks / 8 weeks) or **Weeks** (8 / 16 / 26 ISO weeks, Monday–Sunday): bar chart of reps, toggle to time. Stat tiles for the range. A list of days (tapping one opens it on the Today tab) or of weeks. A per-exercise breakdown for the range. |
-| **Exercises** | Search box, "Recent" first, then all exercises grouped by category. Tapping an exercise opens the log sheet with it preselected. Custom exercises can be added. |
+| **History** | Group by **Days** (14 days / 4 weeks / 8 weeks) or **Weeks** (8 / 16 / 26 ISO weeks, Monday–Sunday): bar chart of reps, toggle to time. Stat tiles for the range. A list of days (tapping one opens it on the Today tab) or of weeks. A per-exercise breakdown for the range; tapping a row opens that exercise's page. |
+| **Exercises** | Search box, "Recent" first, then all visible exercises grouped by category. Tapping an exercise opens its **exercise page**. Custom exercises can be added. "Hide N unused" hides every never-logged built-in at once; a "Hidden" section lists hidden exercises with "Show all". |
+
+**Exercise page** (sheet): totals, sessions, best session (most reps or longest time summed over one session) and best set (single entry), a 4-week daily / 26-week weekly chart and every session with the exercise (the best one marked; tapping one opens that day). Footer: Hide / Show again, Edit (custom only), Log.
+
+**Hidden exercises** are left out of the pickers and Recent; a search still finds them under a "Hidden" group. Their entries count everywhere as before.
 
 A floating **Log** button is always present on phones (sidebar button on desktop).
 
@@ -85,6 +89,12 @@ import backup (JSON, validated, preview, replace-all), delete everything, about.
    `startedAt`. Dates are local calendar dates; nothing is converted through UTC.
 7. **Undo instead of confirm dialogs** for everyday actions (Conrad rule). Only "delete everything"
    confirms.
+8. **Hiding lives in `settings.hiddenExerciseIds`**, not on the exercise. Built-ins are code, not data,
+   so a per-id list is the only way to hide them; custom exercises use the same list. Data version 2.
+   Migration steps are the pure `upgradeAppData` in `domain/backup.ts`, so localStorage and backup
+   import upgrade old data identically.
+9. **The Exercises tab opens the exercise page, not the log sheet.** Logging from there costs one more
+   tap (page → Log); the Log button stays one tap from everywhere.
 
 ## Data Model
 
@@ -116,10 +126,14 @@ interface Session {
 }
 
 interface AppData {
-  version: 1;
+  version: 2;              // 1 -> 2 adds settings.hiddenExerciseIds
   sessions: Session[];        // sorted by startedAt
   customExercises: Exercise[];
-  settings: { sessionGapMinutes: number; installHintDismissed: boolean };
+  settings: {
+    sessionGapMinutes: number;
+    installHintDismissed: boolean;
+    hiddenExerciseIds: string[];   // added in version 2
+  };
 }
 ```
 
@@ -171,14 +185,15 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 
 - [ ] Verify on a real phone (iOS Safari install, Android Chrome install)
 - [x] Weekly view in History (group by ISO week)
-- [ ] Per-exercise page: history chart for one exercise, personal best per session
-- [ ] Reorder / hide built-in exercises the owner never uses
+- [x] Per-exercise page: history chart for one exercise, personal best per session
+- [x] Hide built-in exercises the owner never uses (one by one or "Hide N unused")
 
 ### Ideas parked (not planned)
 
 - Reminders / nudges ("no snack since 11:00")
 - Import from MuscleUp session JSON (owner explicitly does not want sync)
 - Weight per entry
+- Manual reordering of exercises (Recent + hiding covers the need for now)
 
 ## Verification Checklist
 
@@ -192,7 +207,9 @@ npm run dev        # http://localhost:5173/SnackTrainer/
 ```
 
 Manual: log an entry, log another within 20 minutes (same session), one after (new session),
-edit an entry's reps, delete, undo, step back a day, check the chart, export a backup, import it.
+edit an entry's reps, delete, undo, step back a day, check the chart (Days and Weeks), open an
+exercise page from the Exercises tab and from History, hide an exercise and undo, "Hide N unused",
+search for a hidden exercise in the log sheet, export a backup, import it.
 
 ## Search Anchor
 

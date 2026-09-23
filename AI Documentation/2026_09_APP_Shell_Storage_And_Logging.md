@@ -1,7 +1,7 @@
 # App Shell, Storage and Logging (SnackTrainer v0.1)
 
 Documentation ID: `APP-SHELL-STORAGE-LOGGING`
-File revision: `2026_09_r1`
+File revision: `2026_09_r2`
 Last reviewed: `2026-09-23`
 
 Related code:
@@ -16,6 +16,7 @@ Related code:
 
 Related documentation:
 - `[Planning]/SnackTrainer Vision & Plan v1.md` — why the app exists, decisions, plan
+- `2026_09_UI_History_Weeks_Exercise_Page_Hiding.md` (`UI-HISTORY-WEEKS-EXERCISE-PAGE`) — week grouping, exercise page, hidden exercises, data version 2
 
 ## Short Version
 
@@ -61,8 +62,8 @@ Data flow: view → `useActions` (or `repository.setSettings` for settings) → 
 | `src/ui/views/TodayView.tsx` | Day header with ← / →, stat tiles, session cards (newest first), entry rows |
 | `src/ui/views/LogSheet.tsx` | Two-step sheet: `ExercisePicker` → `Counter`/`Stopwatch` + time override; "Save & add another" |
 | `src/ui/views/EntrySheet.tsx` | Edit amount/mode/time or delete one entry |
-| `src/ui/views/HistoryView.tsx` | Range (14/28/56 days) and metric (reps/time) toggles, `BarChart`, stat tiles, day list, per-exercise totals |
-| `src/ui/views/ExercisesView.tsx` | Catalogue with totals and last use; opens the log sheet with the exercise preselected |
+| `src/ui/views/HistoryView.tsx` | Days/Weeks grouping, range and metric (reps/time) toggles, `BarChart`, stat tiles, day or week list, per-exercise totals (see `UI-HISTORY-WEEKS-EXERCISE-PAGE`) |
+| `src/ui/views/ExercisesView.tsx` | Catalogue with totals and last use; opens the exercise page (see `UI-HISTORY-WEEKS-EXERCISE-PAGE`) |
 | `src/ui/views/ExerciseEditor.tsx` | Create/edit/delete custom exercises |
 | `src/ui/views/SettingsSheet.tsx` | Install, session gap stepper, backup export/import with preview, delete all, about |
 | `src/ui/components/BarChart.tsx` | PowerOn-style CSS bar chart: nice axis maximum, gridlines, tap to select |
@@ -95,16 +96,13 @@ set to GitHub Actions first), backup import via the file picker (export/parse is
 
 ## Open Items / Deliberately Not Done
 
-- Editing a custom exercise is reached through the chips under the Exercises list; a
-  long-press on the row would be nicer.
-- No demo-data button; test data was injected through the console.
-- No week grouping in History yet (planned in the vision document, milestone 2).
+- No demo-data button (dropped from the plan); test data is injected through the console.
 - The native `<input type="time">` follows the browser locale (12-hour in en-US browsers).
 
 ## Maintenance Notes
 
-Update this note when `AppData` changes shape (also bump `DATA_VERSION`, add a migration in
-`repository.ts`, extend `backup.ts` validation and tests), when the session-grouping rule
+Update this note when `AppData` changes shape (also bump `DATA_VERSION`, add a step to
+`upgradeAppData` in `backup.ts`, extend `validateAppData` and tests), when the session-grouping rule
 changes, or when a new tab/sheet is added. Wording, styling and new exercises in the catalogue
 do not need a documentation update.
 

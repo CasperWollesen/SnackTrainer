@@ -1,7 +1,7 @@
 import { Smartphone, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { findEntry } from './domain/sessions';
-import { isBuiltIn } from './domain/exercises';
+import { findExercise, isBuiltIn, unknownExercise } from './domain/exercises';
 import type { Entry, Exercise, ISODate } from './domain/types';
 import { repository } from './storage/repository';
 import { texts } from './texts';
@@ -16,6 +16,7 @@ import { ToastProvider, useToast } from './ui/hooks/useToast';
 import { useActions } from './ui/useActions';
 import { EntrySheet } from './ui/views/EntrySheet';
 import { ExerciseEditor } from './ui/views/ExerciseEditor';
+import { ExerciseSheet } from './ui/views/ExerciseSheet';
 import { ExercisesView } from './ui/views/ExercisesView';
 import { HistoryView } from './ui/views/HistoryView';
 import { LogSheet } from './ui/views/LogSheet';
@@ -27,6 +28,7 @@ type Overlay =
   | { kind: 'log'; exercise: Exercise | null }
   | { kind: 'entry'; entryId: string }
   | { kind: 'exercise'; exercise: Exercise | null }
+  | { kind: 'exerciseInfo'; exerciseId: string }
   | { kind: 'settings' };
 
 export function App() {
@@ -73,11 +75,10 @@ function Shell() {
     setTab('today');
   };
 
-  const pickFromExercises = (exercise: Exercise) => {
-    // Custom exercises open the editor on long tap in a later version; for now tapping logs.
-    setDate(today);
-    openLog(exercise);
-  };
+  const openExercise = (exerciseId: string) => setOverlay({ kind: 'exerciseInfo', exerciseId });
+  // Looked up on every render so the page follows edits; a deleted custom exercise shows as unknown.
+  const infoExercise =
+    overlay.kind === 'exerciseInfo' ? (findExercise(data, overlay.exerciseId) ?? unknownExercise(overlay.exerciseId)) : null;
 
   return (
     <div className="app">
@@ -111,26 +112,16 @@ function Shell() {
             onOpenEntry={(entry: Entry) => setOverlay({ kind: 'entry', entryId: entry.id })}
           />
         ) : tab === 'history' ? (
-          <HistoryView data={data} today={today} onOpenDay={openDay} />
+          <HistoryView data={data} today={today} onOpenDay={openDay} onOpenExercise={openExercise} />
         ) : (
-          <ExercisesView data={data} today={today} onPick={pickFromExercises} onAddCustom={() => setOverlay({ kind: 'exercise', exercise: null })} />
+          <ExercisesView
+            data={data}
+            today={today}
+            onOpen={(e) => openExercise(e.id)}
+            onAddCustom={() => setOverlay({ kind: 'exercise', exercise: null })}
+            onSetHidden={actions.setHidden}
+          />
         )}
-
-        {tab === 'exercises' && data.customExercises.length > 0 ? (
-          <section className="section" style={{ marginTop: 'var(--space-6)' }}>
-            <div className="section__header">
-              <h3 className="section__title">{texts.exercises.custom}</h3>
-            </div>
-            <div className="chips">
-              {data.customExercises.map((e) => (
-                <button key={e.id} type="button" className="chip" onClick={() => setOverlay({ kind: 'exercise', exercise: e })}>
-                  <span aria-hidden="true">{e.emoji || '🏃'}</span>
-                  {e.name} · {texts.common.edit}
-                </button>
-              ))}
-            </div>
-          </section>
-        ) : null}
       </main>
 
       <LogSheet
@@ -144,6 +135,27 @@ function Shell() {
         onSave={(input) => {
           actions.log(input);
           if (tab !== 'today') setTab('today');
+        }}
+      />
+
+      <ExerciseSheet
+        exercise={infoExercise}
+        data={data}
+        today={today}
+        onClose={closeOverlay}
+        onLog={(e) => {
+          setDate(today);
+          openLog(e);
+        }}
+        onEdit={(e) => setOverlay({ kind: 'exercise', exercise: e })}
+        onSetHidden={(e, hide) => {
+          // Close first: the modal sheet makes the toast (and its Undo) unreachable.
+          closeOverlay();
+          actions.setHidden([e.id], hide);
+        }}
+        onOpenDay={(d) => {
+          closeOverlay();
+          openDay(d);
         }}
       />
 

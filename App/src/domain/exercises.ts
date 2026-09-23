@@ -103,6 +103,38 @@ export function unknownExercise(id: string): Exercise {
   return { id, name: 'Unknown exercise', emoji: '❔', category: CUSTOM_CATEGORY, mode: 'reps', bodyweight: false };
 }
 
+export function isHidden(data: Pick<AppData, 'settings'>, id: string): boolean {
+  return data.settings.hiddenExerciseIds.includes(id);
+}
+
+/** Built-ins and custom exercises minus the hidden ones: what the pickers list. */
+export function visibleExercises(data: Pick<AppData, 'customExercises' | 'settings'>): Exercise[] {
+  const hidden = new Set(data.settings.hiddenExerciseIds);
+  return allExercises(data).filter((e) => !hidden.has(e.id));
+}
+
+/** Hidden exercises that still exist, in catalogue order. */
+export function hiddenExercises(data: Pick<AppData, 'customExercises' | 'settings'>): Exercise[] {
+  const hidden = new Set(data.settings.hiddenExerciseIds);
+  return allExercises(data).filter((e) => hidden.has(e.id));
+}
+
+/** Returns the hidden-id list with `ids` hidden (`hide`) or shown again. Order is kept, no duplicates. */
+export function withHidden(hiddenIds: readonly string[], ids: readonly string[], hide: boolean): string[] {
+  if (!hide) {
+    const show = new Set(ids);
+    return hiddenIds.filter((id) => !show.has(id));
+  }
+  return [...new Set([...hiddenIds, ...ids])];
+}
+
+/** Built-in exercises that are visible and have never been logged: candidates for "Hide unused". */
+export function unusedBuiltInIds(data: Pick<AppData, 'sessions' | 'settings'>): string[] {
+  const used = new Set(data.sessions.flatMap((s) => s.entries.map((e) => e.exerciseId)));
+  const hidden = new Set(data.settings.hiddenExerciseIds);
+  return BUILT_IN_EXERCISES.filter((e) => !used.has(e.id) && !hidden.has(e.id)).map((e) => e.id);
+}
+
 export function isBuiltIn(id: string): boolean {
   return BUILT_IN_EXERCISES.some((e) => e.id === id);
 }

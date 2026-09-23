@@ -179,6 +179,24 @@
   color: var(--text-3);
 }
 
+/* Exercise page (ExerciseSheet) ------------------------------------------- */
+.exercise-page__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.exercise-page__best {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
 /* Bottom navigation ------------------------------------------------------- */
 .tabbar {
   position: fixed;

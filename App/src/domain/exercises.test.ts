@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { BUILT_IN_EXERCISES, groupByCategory, recentExerciseIds, searchExercises } from './exercises';
+import {
+  BUILT_IN_EXERCISES,
+  groupByCategory,
+  hiddenExercises,
+  recentExerciseIds,
+  searchExercises,
+  unusedBuiltInIds,
+  visibleExercises,
+  withHidden,
+} from './exercises';
 import { addEntry } from './sessions';
 import { emptyData } from './types';
 
@@ -33,5 +42,26 @@ describe('exercise catalogue', () => {
       { id: 's', name: 'S', emoji: '', category: 'Legs', mode: 'reps', bodyweight: true },
     ]);
     expect(groups.map((g) => g.category)).toEqual(['Legs', 'Chest', 'Custom']);
+  });
+
+  it('hides and shows exercises', () => {
+    const d = emptyData();
+    d.customExercises.push({ id: 'custom-1', name: 'Wall sit', emoji: '', category: 'Custom', mode: 'time', bodyweight: true });
+    d.settings.hiddenExerciseIds = withHidden([], ['squat', 'custom-1', 'squat'], true);
+    expect(d.settings.hiddenExerciseIds).toEqual(['squat', 'custom-1']);
+    expect(visibleExercises(d).some((e) => e.id === 'squat' || e.id === 'custom-1')).toBe(false);
+    expect(visibleExercises(d)).toHaveLength(BUILT_IN_EXERCISES.length - 1);
+    expect(hiddenExercises(d).map((e) => e.id)).toEqual(['squat', 'custom-1']);
+    expect(withHidden(d.settings.hiddenExerciseIds, ['squat'], false)).toEqual(['custom-1']);
+  });
+
+  it('lists built-ins never logged and not already hidden', () => {
+    let d = emptyData();
+    d = addEntry(d, { exerciseId: 'push-up', at: '2026-09-23T07:00', amount: { reps: 10 } }).data;
+    d.settings.hiddenExerciseIds = ['squat'];
+    const unused = unusedBuiltInIds(d);
+    expect(unused).not.toContain('push-up');
+    expect(unused).not.toContain('squat');
+    expect(unused).toHaveLength(BUILT_IN_EXERCISES.length - 2);
   });
 });

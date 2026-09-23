@@ -1,4 +1,4 @@
-import { validateAppData } from '../domain/backup';
+import { upgradeAppData, validateAppData } from '../domain/backup';
 import { emptyData, type AppData, type Exercise, type Settings } from '../domain/types';
 import { loadRaw, removeRaw, requestPersistentStorage, saveRaw } from './storage';
 
@@ -88,11 +88,13 @@ class Repository {
 }
 
 /**
- * Upgrades older stored shapes to the current one. Only version 1 exists today;
- * add a step here when DATA_VERSION changes (and keep validateAppData in sync).
+ * Upgrades older stored shapes to the current one. The steps live in the pure
+ * `upgradeAppData` (domain/backup.ts) so backup import runs the same migration;
+ * add a step there when DATA_VERSION changes (and keep validateAppData in sync).
+ * The upgraded blob is written back on the next change, not on load.
  */
 function migrate(raw: unknown): AppData | null {
-  return validateAppData(raw);
+  return validateAppData(upgradeAppData(raw));
 }
 
 export const repository = new Repository();

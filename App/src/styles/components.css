@@ -499,6 +499,33 @@
   color: var(--text-3);
 }
 
+.exercise-row--hidden .entry__emoji,
+.exercise-row--hidden .exercise-row__name {
+  opacity: 0.6;
+}
+
+/* "Hide unused" suggestion on the Exercises tab */
+.tidy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.tidy__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 220px;
+  font-size: var(--text-sm);
+  color: var(--text-2);
+}
+
+.tidy__text strong {
+  color: var(--text);
+}
+
 .exercise-group {
   display: flex;
   flex-direction: column;

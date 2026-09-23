@@ -1,6 +1,6 @@
 import { ChevronRight, Search, Timer, X } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
-import { allExercises, findExercise, groupByCategory, recentExerciseIds, searchExercises } from '../../domain/exercises';
+import { findExercise, groupByCategory, hiddenExercises, recentExerciseIds, searchExercises, visibleExercises } from '../../domain/exercises';
 import type { AppData, Exercise } from '../../domain/types';
 import { texts } from '../../texts';
 import { IconButton } from './Button';
@@ -17,17 +17,28 @@ export interface ExercisePickerProps {
   extra?: ReactNode;
 }
 
-/** Search box, recent chips and the full catalogue grouped by category. */
+/**
+ * Search box, recent chips and the catalogue grouped by category. Hidden exercises are left
+ * out, except that a search also lists hidden matches in a trailing "Hidden" group.
+ */
 export function ExercisePicker({ data, onPick, renderSide, selectedId = null, autoFocus = false, extra }: ExercisePickerProps) {
   const [query, setQuery] = useState('');
-  const exercises = useMemo(() => allExercises(data), [data]);
-  const recent = useMemo(
-    () => recentExerciseIds(data).map((id) => findExercise(data, id)).filter((e): e is Exercise => Boolean(e)),
-    [data],
-  );
-  const matches = useMemo(() => searchExercises(exercises, query), [exercises, query]);
-  const groups = useMemo(() => groupByCategory(matches), [matches]);
+  const exercises = useMemo(() => visibleExercises(data), [data]);
+  const recent = useMemo(() => {
+    const visible = new Set(exercises.map((e) => e.id));
+    return recentExerciseIds(data, 6 + data.settings.hiddenExerciseIds.length)
+      .filter((id) => visible.has(id))
+      .slice(0, 6)
+      .map((id) => findExercise(data, id))
+      .filter((e): e is Exercise => Boolean(e));
+  }, [data, exercises]);
   const searching = query.trim().length > 0;
+  const matches = useMemo(() => searchExercises(exercises, query), [exercises, query]);
+  const hiddenMatches = useMemo(() => (searching ? searchExercises(hiddenExercises(data), query) : []), [data, query, searching]);
+  const groups = useMemo(() => {
+    const visibleGroups = groupByCategory(matches);
+    return hiddenMatches.length > 0 ? [...visibleGroups, { category: texts.exercises.hiddenMatches, exercises: hiddenMatches }] : visibleGroups;
+  }, [matches, hiddenMatches]);
 
   return (
     <div className="form">

@@ -31,8 +31,9 @@ Everything that ships lives under `App/`. Do not put source files in the reposit
 5. **Undo, not confirm.** Everyday actions (log, edit, delete an entry) show a toast with Undo.
    Only "delete everything" asks first.
 6. **No new dependency** without a note in the vision document's decisions.
-7. **Changing `AppData`?** Bump `version` in `src/domain/types.ts`, add a migration step in
-   `src/storage/repository.ts`, update `src/domain/backup.ts` validation and its tests.
+7. **Changing `AppData`?** Bump `version` in `src/domain/types.ts`, add a step to `upgradeAppData`
+   in `src/domain/backup.ts` (used by `src/storage/repository.ts` and backup import), update
+   `validateAppData` and its tests.
 8. **Relative asset paths.** The app is served from `/SnackTrainer/`; Vite's `base` handles it.
    Never hard-code the sub path in code.
 

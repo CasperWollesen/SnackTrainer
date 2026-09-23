@@ -43,9 +43,12 @@ export interface Settings {
   /** Minutes since the previous entry within which a new entry joins the same session. */
   sessionGapMinutes: number;
   installHintDismissed: boolean;
+  /** Exercise ids left out of the pickers (built-in or custom). Their entries still count everywhere. */
+  hiddenExerciseIds: string[];
 }
 
-export const DATA_VERSION = 1;
+/** 2: settings.hiddenExerciseIds added (v1 data is upgraded by `upgradeAppData`). */
+export const DATA_VERSION = 2;
 
 export interface AppData {
   version: typeof DATA_VERSION;
@@ -58,6 +61,7 @@ export interface AppData {
 export const DEFAULT_SETTINGS: Settings = {
   sessionGapMinutes: 20,
   installHintDismissed: false,
+  hiddenExerciseIds: [],
 };
 
 export function emptyData(): AppData {
@@ -65,6 +69,6 @@ export function emptyData(): AppData {
     version: DATA_VERSION,
     sessions: [],
     customExercises: [],
-    settings: { ...DEFAULT_SETTINGS },
+    settings: { ...DEFAULT_SETTINGS, hiddenExerciseIds: [] },
   };
 }

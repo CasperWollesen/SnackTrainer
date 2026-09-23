@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createBackup, parseBackup, serializeBackup, validateAppData } from './backup';
+import { createBackup, parseBackup, serializeBackup, upgradeAppData, validateAppData } from './backup';
 import { addEntry } from './sessions';
 import { emptyData } from './types';
 
@@ -36,7 +36,7 @@ describe('backup', () => {
   });
 
   it('rejects entries with both reps and seconds, or neither', () => {
-    const base = { version: 1, sessions: [{ id: 's', date: '2026-09-23', startedAt: '2026-09-23T07:30', entries: [] as unknown[] }] };
+    const base = { version: 2, sessions: [{ id: 's', date: '2026-09-23', startedAt: '2026-09-23T07:30', entries: [] as unknown[] }] };
     base.sessions[0]!.entries = [{ id: 'e', exerciseId: 'x', at: '2026-09-23T07:30', reps: 1, seconds: 1 }];
     expect(validateAppData(base)).toBeNull();
     base.sessions[0]!.entries = [{ id: 'e', exerciseId: 'x', at: '2026-09-23T07:30' }];
@@ -47,7 +47,7 @@ describe('backup', () => {
 
   it('fills missing settings with defaults and sorts sessions', () => {
     const raw = {
-      version: 1,
+      version: 2,
       sessions: [
         { id: 'b', date: '2026-09-23', startedAt: '2026-09-23T15:00', entries: [{ id: '2', exerciseId: 'x', at: '2026-09-23T15:00', reps: 1 }] },
         { id: 'a', date: '2026-09-23', startedAt: '2026-09-23T07:00', entries: [{ id: '1', exerciseId: 'x', at: '2026-09-23T07:00', reps: 1 }] },
@@ -55,7 +55,29 @@ describe('backup', () => {
     };
     const data = validateAppData(raw);
     expect(data?.sessions.map((s) => s.id)).toEqual(['a', 'b']);
-    expect(data?.settings).toEqual({ sessionGapMinutes: 20, installHintDismissed: false });
+    expect(data?.settings).toEqual({ sessionGapMinutes: 20, installHintDismissed: false, hiddenExerciseIds: [] });
     expect(data?.customExercises).toEqual([]);
+  });
+
+  it('upgrades version 1 data (localStorage and backups) to version 2', () => {
+    const v1 = {
+      version: 1,
+      sessions: [{ id: 'a', date: '2026-09-23', startedAt: '2026-09-23T07:00', entries: [{ id: '1', exerciseId: 'x', at: '2026-09-23T07:00', reps: 1 }] }],
+      settings: { sessionGapMinutes: 30, installHintDismissed: true },
+    };
+    expect(validateAppData(v1)).toBeNull(); // not accepted without the upgrade step
+    const data = validateAppData(upgradeAppData(v1));
+    expect(data?.version).toBe(2);
+    expect(data?.settings).toEqual({ sessionGapMinutes: 30, installHintDismissed: true, hiddenExerciseIds: [] });
+
+    const parsed = parseBackup(JSON.stringify({ app: 'snacktrainer', formatVersion: 1, exportedAt: 'x', data: v1 }));
+    expect(parsed.ok && parsed.data.version).toBe(2);
+    expect(upgradeAppData({ version: 99 })).toEqual({ version: 99 });
+  });
+
+  it('cleans hidden exercise ids', () => {
+    const data = validateAppData({ version: 2, sessions: [], settings: { hiddenExerciseIds: ['squat', '', 'squat', 7, 'plank'] } });
+    expect(data?.settings.hiddenExerciseIds).toEqual(['squat', 'plank']);
+    expect(validateAppData({ version: 2, sessions: [], settings: { hiddenExerciseIds: 'squat' } })?.settings.hiddenExerciseIds).toEqual([]);
   });
 });

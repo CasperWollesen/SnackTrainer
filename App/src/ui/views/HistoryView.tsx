@@ -16,6 +16,7 @@ export interface HistoryViewProps {
   data: AppData;
   today: ISODate;
   onOpenDay: (date: ISODate) => void;
+  onOpenExercise: (exerciseId: string) => void;
 }
 
 type Group = 'days' | 'weeks';
@@ -52,7 +53,7 @@ function rangeStart(group: Group, range: Range, today: ISODate): ISODate {
   return group === 'days' ? addDays(today, -(n - 1)) : addDays(startOfWeek(today), -7 * (n - 1));
 }
 
-export function HistoryView({ data, today, onOpenDay }: HistoryViewProps) {
+export function HistoryView({ data, today, onOpenDay, onOpenExercise }: HistoryViewProps) {
   const [group, setGroup] = useState<Group>('days');
   const [range, setRange] = useState<Range>('14');
   const [metric, setMetric] = useState<Metric>('reps');
@@ -194,7 +195,7 @@ export function HistoryView({ data, today, onOpenDay }: HistoryViewProps) {
                 {perExercise.map((row) => {
                   const ex = findExercise(data, row.exerciseId) ?? unknownExercise(row.exerciseId);
                   return (
-                    <div key={row.exerciseId} className="entry" style={{ cursor: 'default' }}>
+                    <button key={row.exerciseId} type="button" className="entry" onClick={() => onOpenExercise(row.exerciseId)}>
                       <span className="entry__emoji" aria-hidden="true">
                         {ex.emoji || '🏃'}
                       </span>
@@ -210,7 +211,7 @@ export function HistoryView({ data, today, onOpenDay }: HistoryViewProps) {
                         {row.reps > 0 ? row.reps : formatDuration(row.seconds)}
                         {row.reps > 0 ? <small>{texts.common.reps}</small> : null}
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

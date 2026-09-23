@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { findExercise, unknownExercise } from '../domain/exercises';
+import { findExercise, unknownExercise, withHidden } from '../domain/exercises';
 import { addEntry, deleteEntry, findEntry, restoreEntry, updateEntry, type Amount, type NewEntry } from '../domain/sessions';
 import type { Exercise, LocalDateTime } from '../domain/types';
 import { repository } from '../storage/repository';
@@ -72,5 +72,28 @@ export function useActions() {
     [afterWrite],
   );
 
-  return useMemo(() => ({ log, edit, remove, saveExercise, deleteExercise }), [log, edit, remove, saveExercise, deleteExercise]);
+  /** Hides or shows exercises in the pickers. Undo restores the previous hidden list exactly. */
+  const setHidden = useCallback(
+    (ids: string[], hide: boolean) => {
+      const before = repository.get().settings.hiddenExerciseIds;
+      const after = withHidden(before, ids, hide);
+      if (after.length === before.length && after.every((id, i) => id === before[i])) return;
+      repository.setSettings({ hiddenExerciseIds: after });
+      const name = ids.length === 1 ? (findExercise(repository.get(), ids[0]!)?.name ?? null) : null;
+      const message = name
+        ? hide
+          ? texts.toast.exerciseHidden(name)
+          : texts.toast.exerciseShown(name)
+        : hide
+          ? texts.toast.exercisesHidden(ids.length)
+          : texts.toast.exercisesShown(ids.length);
+      afterWrite(message, () => repository.setSettings({ hiddenExerciseIds: before }));
+    },
+    [afterWrite],
+  );
+
+  return useMemo(
+    () => ({ log, edit, remove, saveExercise, deleteExercise, setHidden }),
+    [log, edit, remove, saveExercise, deleteExercise, setHidden],
+  );
 }

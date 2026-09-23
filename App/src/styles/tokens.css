@@ -1,0 +1,97 @@
+/*
+ * Design tokens. Dark graphite surfaces, clear typography and a warm
+ * tangerine accent. Everything else in the UI derives from these values.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg: #0f1214;
+  --surface: #171b1f;
+  --surface-2: #21272d;
+  --surface-3: #2b333b;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --overlay: rgba(4, 6, 8, 0.7);
+
+  /* Text */
+  --text: #f3f5f7;
+  --text-2: #a7b0ba;
+  --text-3: #6e7883;
+  --text-on-accent: #1d0d03;
+
+  /* Accent and semantic colours */
+  --accent: #ff9a4d;
+  --accent-strong: #ff8a2e;
+  --accent-soft: rgba(255, 154, 77, 0.16);
+  --accent-ring: rgba(255, 154, 77, 0.5);
+  --time: #5ec8f2;
+  --time-soft: rgba(94, 200, 242, 0.16);
+  --warn: #f5c451;
+  --warn-soft: rgba(245, 196, 81, 0.14);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+
+  /* Typography */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
+    sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3.5rem;
+  --leading: 1.45;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Shape */
+  --radius-s: 10px;
+  --radius-m: 14px;
+  --radius-l: 20px;
+  --radius-xl: 26px;
+  --radius-full: 999px;
+
+  /* Sizes */
+  --tap: 44px;
+  --tabbar-h: 64px;
+  --content-max: 640px;
+  --sidebar-w: 232px;
+
+  /* Elevation */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 16px 48px rgba(0, 0, 0, 0.5);
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 320ms;
+
+  /* Safe areas */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}

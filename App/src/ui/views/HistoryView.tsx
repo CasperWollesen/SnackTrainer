@@ -1,0 +1,152 @@
+import { BarChart3, ChevronRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { addDays } from '../../domain/dates';
+import { findExercise, unknownExercise } from '../../domain/exercises';
+import { dailyTotals, exerciseTotals, sessionsBetween, totalsOf } from '../../domain/sessions';
+import type { AppData, ISODate } from '../../domain/types';
+import { texts } from '../../texts';
+import { BarChart } from '../components/BarChart';
+import { Segmented } from '../components/Button';
+import { EmptyState } from '../components/EmptyState';
+import { Section } from '../components/Section';
+import { StatTiles } from '../components/StatTiles';
+import { formatDuration, formatRelativeDay, formatTotalTime } from '../format';
+
+export interface HistoryViewProps {
+  data: AppData;
+  today: ISODate;
+  onOpenDay: (date: ISODate) => void;
+}
+
+type Range = '14' | '28' | '56';
+type Metric = 'reps' | 'time';
+
+const RANGE_OPTIONS: { value: Range; label: string }[] = [
+  { value: '14', label: texts.history.range.twoWeeks },
+  { value: '28', label: texts.history.range.fourWeeks },
+  { value: '56', label: texts.history.range.eightWeeks },
+];
+
+const METRIC_OPTIONS: { value: Metric; label: string }[] = [
+  { value: 'reps', label: texts.history.metric.reps },
+  { value: 'time', label: texts.history.metric.time },
+];
+
+export function HistoryView({ data, today, onOpenDay }: HistoryViewProps) {
+  const [range, setRange] = useState<Range>('14');
+  const [metric, setMetric] = useState<Metric>('reps');
+  const [selected, setSelected] = useState<ISODate | null>(null);
+
+  const from = addDays(today, -(Number(range) - 1));
+  const days = useMemo(() => dailyTotals(data, from, today), [data, from, today]);
+  const sessions = useMemo(() => sessionsBetween(data, from, today), [data, from, today]);
+  const totals = useMemo(() => totalsOf(sessions), [sessions]);
+  const perExercise = useMemo(() => exerciseTotals(sessions), [sessions]);
+  const activeDays = days.filter((d) => d.entries > 0);
+
+  const chartDays = days.map((d) => ({ date: d.date, value: metric === 'reps' ? d.reps : Math.round(d.seconds / 60) }));
+  const hasAny = data.sessions.length > 0;
+
+  return (
+    <div className="view">
+      <header className="view__header">
+        <div className="view__heading">
+          <h1 className="view__title">{texts.history.title}</h1>
+        </div>
+      </header>
+
+      {!hasAny ? (
+        <EmptyState icon={<BarChart3 size={26} />} title={texts.history.emptyTitle} text={texts.history.emptyText} />
+      ) : (
+        <>
+          <div className="toolbar">
+            <Segmented value={range} options={RANGE_OPTIONS} onChange={setRange} label={texts.history.title} />
+            <Segmented value={metric} options={METRIC_OPTIONS} onChange={setMetric} label={texts.history.metric.reps} />
+          </div>
+
+          <div className="card">
+            <BarChart
+              days={chartDays}
+              today={today}
+              selected={selected}
+              onSelect={(d) => setSelected((cur) => (cur === d ? null : d))}
+              tone={metric}
+              format={(v) => (metric === 'reps' ? String(v) : `${v} ${texts.common.minutes}`)}
+              label={metric === 'reps' ? texts.history.chartLabel : texts.history.chartLabelTime}
+            />
+          </div>
+
+          <StatTiles
+            stats={[
+              { label: texts.history.stats.reps, value: String(totals.reps), tone: 'accent' },
+              { label: texts.history.stats.time, value: totals.seconds > 0 ? formatTotalTime(totals.seconds) : '–', tone: 'time' },
+              { label: texts.history.stats.sessions, value: String(totals.sessions) },
+              { label: texts.history.stats.activeDays, value: `${activeDays.length}/${days.length}` },
+            ]}
+          />
+
+          <Section title={texts.history.days} count={activeDays.length}>
+            <div className="list">
+              {[...activeDays].reverse().map((d) => (
+                <button
+                  key={d.date}
+                  type="button"
+                  className={`dayrow${d.date === selected ? ' dayrow--selected' : ''}`}
+                  onClick={() => onOpenDay(d.date)}
+                  aria-label={`${texts.history.openDay}: ${formatRelativeDay(d.date, today)}`}
+                >
+                  <span className="dayrow__label">
+                    <span className="dayrow__name">{formatRelativeDay(d.date, today)}</span>
+                    <span className="dayrow__meta">
+                      {texts.today.session(d.sessions)} · {texts.history.entries(d.entries)}
+                    </span>
+                  </span>
+                  <span className="dayrow__value">
+                    {d.reps > 0 ? (
+                      <>
+                        {d.reps}
+                        <small>{texts.common.reps}</small>
+                      </>
+                    ) : null}
+                    {d.reps > 0 && d.seconds > 0 ? ' · ' : null}
+                    {d.seconds > 0 ? <span className="dayrow__value--time">{formatDuration(d.seconds)}</span> : null}
+                  </span>
+                  <ChevronRight size={18} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          {perExercise.length > 0 ? (
+            <Section title={texts.history.byExercise} count={perExercise.length}>
+              <div className="card" style={{ padding: 'var(--space-1) var(--space-2)' }}>
+                {perExercise.map((row) => {
+                  const ex = findExercise(data, row.exerciseId) ?? unknownExercise(row.exerciseId);
+                  return (
+                    <div key={row.exerciseId} className="entry" style={{ cursor: 'default' }}>
+                      <span className="entry__emoji" aria-hidden="true">
+                        {ex.emoji || '🏃'}
+                      </span>
+                      <span className="entry__body">
+                        <span className="entry__name">{ex.name}</span>
+                        <span className="entry__meta">
+                          {texts.history.entries(row.entries)}
+                          {row.bestReps > 0 ? ` · ${texts.history.best} ${row.bestReps}` : ''}
+                          {row.bestSeconds > 0 ? ` · ${texts.history.best} ${formatDuration(row.bestSeconds)}` : ''}
+                        </span>
+                      </span>
+                      <span className={`entry__amount${row.reps === 0 && row.seconds > 0 ? ' entry__amount--time' : ''}`}>
+                        {row.reps > 0 ? row.reps : formatDuration(row.seconds)}
+                        {row.reps > 0 ? <small>{texts.common.reps}</small> : null}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}

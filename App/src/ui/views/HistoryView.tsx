@@ -1,16 +1,16 @@
 import { BarChart3, ChevronRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { addDays } from '../../domain/dates';
+import { addDays, isoWeekNumber, startOfWeek } from '../../domain/dates';
 import { findExercise, unknownExercise } from '../../domain/exercises';
-import { dailyTotals, exerciseTotals, sessionsBetween, totalsOf } from '../../domain/sessions';
+import { dailyTotals, exerciseTotals, sessionsBetween, totalsOf, weeklyTotals } from '../../domain/sessions';
 import type { AppData, ISODate } from '../../domain/types';
 import { texts } from '../../texts';
-import { BarChart } from '../components/BarChart';
+import { BarChart, dayBars, weekBars } from '../components/BarChart';
 import { Segmented } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { Section } from '../components/Section';
 import { StatTiles } from '../components/StatTiles';
-import { formatDuration, formatRelativeDay, formatTotalTime } from '../format';
+import { formatDuration, formatRelativeDay, formatTotalTime, formatWeekRange } from '../format';
 
 export interface HistoryViewProps {
   data: AppData;
@@ -18,13 +18,27 @@ export interface HistoryViewProps {
   onOpenDay: (date: ISODate) => void;
 }
 
-type Range = '14' | '28' | '56';
+type Group = 'days' | 'weeks';
+/** Number of days (day grouping) or weeks (week grouping). */
+type Range = '14' | '28' | '56' | '8' | '16' | '26';
 type Metric = 'reps' | 'time';
 
-const RANGE_OPTIONS: { value: Range; label: string }[] = [
-  { value: '14', label: texts.history.range.twoWeeks },
-  { value: '28', label: texts.history.range.fourWeeks },
-  { value: '56', label: texts.history.range.eightWeeks },
+const RANGE_OPTIONS: Record<Group, { value: Range; label: string }[]> = {
+  days: [
+    { value: '14', label: texts.history.range.twoWeeks },
+    { value: '28', label: texts.history.range.fourWeeks },
+    { value: '56', label: texts.history.range.eightWeeks },
+  ],
+  weeks: [
+    { value: '8', label: texts.history.range.eightWeeks },
+    { value: '16', label: texts.history.range.sixteenWeeks },
+    { value: '26', label: texts.history.range.halfYear },
+  ],
+};
+
+const GROUP_OPTIONS: { value: Group; label: string }[] = [
+  { value: 'days', label: texts.history.group.days },
+  { value: 'weeks', label: texts.history.group.weeks },
 ];
 
 const METRIC_OPTIONS: { value: Metric; label: string }[] = [
@@ -32,20 +46,47 @@ const METRIC_OPTIONS: { value: Metric; label: string }[] = [
   { value: 'time', label: texts.history.metric.time },
 ];
 
+/** First day of the range: `n` days back, or the Monday `n` weeks back (whole ISO weeks). */
+function rangeStart(group: Group, range: Range, today: ISODate): ISODate {
+  const n = Number(range);
+  return group === 'days' ? addDays(today, -(n - 1)) : addDays(startOfWeek(today), -7 * (n - 1));
+}
+
 export function HistoryView({ data, today, onOpenDay }: HistoryViewProps) {
+  const [group, setGroup] = useState<Group>('days');
   const [range, setRange] = useState<Range>('14');
   const [metric, setMetric] = useState<Metric>('reps');
-  const [selected, setSelected] = useState<ISODate | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
-  const from = addDays(today, -(Number(range) - 1));
+  const from = rangeStart(group, range, today);
   const days = useMemo(() => dailyTotals(data, from, today), [data, from, today]);
+  const weeks = useMemo(() => (group === 'weeks' ? weeklyTotals(data, from, today) : []), [data, group, from, today]);
   const sessions = useMemo(() => sessionsBetween(data, from, today), [data, from, today]);
   const totals = useMemo(() => totalsOf(sessions), [sessions]);
   const perExercise = useMemo(() => exerciseTotals(sessions), [sessions]);
   const activeDays = days.filter((d) => d.entries > 0);
+  const activeWeeks = weeks.filter((w) => w.entries > 0);
 
-  const chartDays = days.map((d) => ({ date: d.date, value: metric === 'reps' ? d.reps : Math.round(d.seconds / 60) }));
+  const valueOf = (t: { reps: number; seconds: number }) => (metric === 'reps' ? t.reps : Math.round(t.seconds / 60));
+  const bars =
+    group === 'days'
+      ? dayBars(days.map((d) => ({ date: d.date, value: valueOf(d) })), today)
+      : weekBars(weeks.map((w) => ({ weekStart: w.weekStart, value: valueOf(w) })), today);
+  const chartLabel =
+    group === 'days'
+      ? metric === 'reps'
+        ? texts.history.chartLabel
+        : texts.history.chartLabelTime
+      : metric === 'reps'
+        ? texts.history.chartLabelWeek
+        : texts.history.chartLabelWeekTime;
   const hasAny = data.sessions.length > 0;
+
+  const changeGroup = (next: Group) => {
+    setGroup(next);
+    setRange(RANGE_OPTIONS[next][0]!.value);
+    setSelected(null);
+  };
 
   return (
     <div className="view">
@@ -60,19 +101,19 @@ export function HistoryView({ data, today, onOpenDay }: HistoryViewProps) {
       ) : (
         <>
           <div className="toolbar">
-            <Segmented value={range} options={RANGE_OPTIONS} onChange={setRange} label={texts.history.title} />
-            <Segmented value={metric} options={METRIC_OPTIONS} onChange={setMetric} label={texts.history.metric.reps} />
+            <Segmented value={group} options={GROUP_OPTIONS} onChange={changeGroup} label={texts.history.group.label} />
+            <Segmented value={range} options={RANGE_OPTIONS[group]} onChange={setRange} label={texts.history.rangeLabel} />
+            <Segmented value={metric} options={METRIC_OPTIONS} onChange={setMetric} label={texts.history.metric.label} />
           </div>
 
           <div className="card">
             <BarChart
-              days={chartDays}
-              today={today}
+              bars={bars}
               selected={selected}
               onSelect={(d) => setSelected((cur) => (cur === d ? null : d))}
               tone={metric}
               format={(v) => (metric === 'reps' ? String(v) : `${v} ${texts.common.minutes}`)}
-              label={metric === 'reps' ? texts.history.chartLabel : texts.history.chartLabelTime}
+              label={chartLabel}
             />
           </div>
 
@@ -85,6 +126,35 @@ export function HistoryView({ data, today, onOpenDay }: HistoryViewProps) {
             ]}
           />
 
+          {group === 'weeks' ? (
+            <Section title={texts.history.weeks} count={activeWeeks.length}>
+              <div className="list">
+                {[...activeWeeks].reverse().map((w) => (
+                  <div key={w.weekStart} className={`dayrow dayrow--static${w.weekStart === selected ? ' dayrow--selected' : ''}`}>
+                    <span className="dayrow__label">
+                      <span className="dayrow__name">
+                        {w.weekStart === startOfWeek(today) ? texts.history.thisWeek : texts.history.week(isoWeekNumber(w.weekStart))}
+                        <span className="dayrow__sub"> · {formatWeekRange(w.weekStart)}</span>
+                      </span>
+                      <span className="dayrow__meta">
+                        {texts.history.activeDays(w.activeDays)} · {texts.today.session(w.sessions)} · {texts.history.entries(w.entries)}
+                      </span>
+                    </span>
+                    <span className="dayrow__value">
+                      {w.reps > 0 ? (
+                        <>
+                          {w.reps}
+                          <small>{texts.common.reps}</small>
+                        </>
+                      ) : null}
+                      {w.reps > 0 && w.seconds > 0 ? ' · ' : null}
+                      {w.seconds > 0 ? <span className="dayrow__value--time">{formatDuration(w.seconds)}</span> : null}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          ) : (
           <Section title={texts.history.days} count={activeDays.length}>
             <div className="list">
               {[...activeDays].reverse().map((d) => (
@@ -116,6 +186,7 @@ export function HistoryView({ data, today, onOpenDay }: HistoryViewProps) {
               ))}
             </div>
           </Section>
+          )}
 
           {perExercise.length > 0 ? (
             <Section title={texts.history.byExercise} count={perExercise.length}>

@@ -1,4 +1,4 @@
-import { daysBetween, parseISODate, weekdayOf } from '../domain/dates';
+import { addDays, daysBetween, parseISODate, weekdayOf } from '../domain/dates';
 import type { Entry, Exercise, ISODate } from '../domain/types';
 import { MONTH_NAMES, MONTH_SHORT, WEEKDAY_NAMES, WEEKDAY_SHORT, texts } from '../texts';
 
@@ -20,6 +20,14 @@ export function formatDayLong(iso: ISODate): string {
 export function formatDayShort(iso: ISODate): string {
   const d = parseISODate(iso);
   return `${weekdayShort(iso)} ${d.getDate()} ${MONTH_SHORT[d.getMonth()] ?? ''}`;
+}
+
+/** "21–27 Sep" or "28 Sep – 4 Oct" for the week starting on `monday`. */
+export function formatWeekRange(monday: ISODate): string {
+  const a = parseISODate(monday);
+  const b = parseISODate(addDays(monday, 6));
+  if (a.getMonth() === b.getMonth()) return `${a.getDate()}–${b.getDate()} ${MONTH_SHORT[b.getMonth()] ?? ''}`;
+  return `${a.getDate()} ${MONTH_SHORT[a.getMonth()] ?? ''} – ${b.getDate()} ${MONTH_SHORT[b.getMonth()] ?? ''}`;
 }
 
 /** "23 Sep 2026" */

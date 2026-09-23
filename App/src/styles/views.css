@@ -124,6 +124,14 @@
   background: var(--surface-2);
 }
 
+.dayrow--static {
+  grid-template-columns: 1fr auto;
+}
+
+.dayrow--static:hover {
+  background: var(--surface);
+}
+
 .dayrow--selected {
   border-color: var(--accent);
 }
@@ -137,6 +145,11 @@
 
 .dayrow__name {
   font-weight: 600;
+}
+
+.dayrow__sub {
+  font-weight: 400;
+  color: var(--text-2);
 }
 
 .dayrow__meta {

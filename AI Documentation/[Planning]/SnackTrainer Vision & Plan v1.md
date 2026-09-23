@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r1`
+File revision: `2026_09_r2`
 Last reviewed: `2026-09-23`
 
 Related repositories (inspiration, not dependencies):
@@ -35,7 +35,7 @@ counting, weights, social features, streak gamification.
 | Tab | What it shows |
 |---|---|
 | **Today** | The selected day (default today) with ← / → to step back and forth. Stat tiles (reps, time, sessions) and the list of sessions, each with its clock time and the entries logged in it ("07:30 · 20 Push-Up"). Tap an entry to edit or delete it. |
-| **History** | A 14-day (expandable to 8 weeks) bar chart of reps per day, toggle to time per day. Stat tiles for the range. A list of days; tapping one opens it on the Today tab. A per-exercise breakdown for the range. |
+| **History** | Group by **Days** (14 days / 4 weeks / 8 weeks) or **Weeks** (8 / 16 / 26 ISO weeks, Monday–Sunday): bar chart of reps, toggle to time. Stat tiles for the range. A list of days (tapping one opens it on the Today tab) or of weeks. A per-exercise breakdown for the range. |
 | **Exercises** | Search box, "Recent" first, then all exercises grouped by category. Tapping an exercise opens the log sheet with it preselected. Custom exercises can be added. |
 
 A floating **Log** button is always present on phones (sidebar button on desktop).
@@ -170,10 +170,9 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 ### Milestone 2 – Polish (next)
 
 - [ ] Verify on a real phone (iOS Safari install, Android Chrome install)
-- [ ] Weekly view in History (group by ISO week)
+- [x] Weekly view in History (group by ISO week)
 - [ ] Per-exercise page: history chart for one exercise, personal best per session
 - [ ] Reorder / hide built-in exercises the owner never uses
-- [ ] Demo data button in dev (`?demo`)
 
 ### Ideas parked (not planned)
 

@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { addEntry, dailyTotals, deleteEntry, exerciseTotals, findSessionFor, restoreEntry, totalsOf, updateEntry } from './sessions';
+import {
+  addEntry,
+  dailyTotals,
+  deleteEntry,
+  exerciseTotals,
+  findSessionFor,
+  personalBests,
+  restoreEntry,
+  sessionsWithExercise,
+  totalsOf,
+  updateEntry,
+  weeklyTotals,
+} from './sessions';
 import { emptyData, type AppData } from './types';
 
 function log(data: AppData, at: string, exerciseId = 'push-up', reps = 10) {
@@ -100,5 +112,48 @@ describe('totals', () => {
     const perExercise = exerciseTotals(d.sessions);
     expect(perExercise[0]).toMatchObject({ exerciseId: 'push-up', reps: 33, entries: 2, bestReps: 20 });
     expect(perExercise.find((x) => x.exerciseId === 'plank')).toMatchObject({ seconds: 60, bestSeconds: 60 });
+  });
+});
+
+describe('weekly totals', () => {
+  it('groups by ISO week and clips partial weeks to the range', () => {
+    let d = emptyData();
+    d = log(d, '2026-09-14T07:00', 'push-up', 10).data; // Mon, week 38
+    d = log(d, '2026-09-20T07:00', 'push-up', 5).data; // Sun, week 38
+    d = log(d, '2026-09-21T07:00', 'push-up', 7).data; // Mon, week 39
+    d = log(d, '2026-09-21T12:00', 'push-up', 3).data;
+    const weeks = weeklyTotals(d, '2026-09-16', '2026-09-23');
+    expect(weeks.map((w) => w.weekStart)).toEqual(['2026-09-14', '2026-09-21']);
+    // The Monday 14th is before the range and is not counted.
+    expect(weeks[0]).toMatchObject({ reps: 5, sessions: 1, activeDays: 1 });
+    expect(weeks[1]).toMatchObject({ reps: 10, sessions: 2, activeDays: 1 });
+  });
+
+  it('includes empty weeks', () => {
+    const weeks = weeklyTotals(emptyData(), '2026-09-01', '2026-09-23');
+    expect(weeks).toHaveLength(4);
+    expect(weeks.every((w) => w.entries === 0 && w.activeDays === 0)).toBe(true);
+  });
+});
+
+describe('per-exercise history', () => {
+  it('narrows sessions to one exercise and finds the best session', () => {
+    let d = emptyData();
+    d = log(d, '2026-09-22T07:00', 'push-up', 10).data;
+    d = log(d, '2026-09-22T07:05', 'push-up', 12).data; // same session: 22
+    d = log(d, '2026-09-22T07:06', 'squat', 50).data;
+    d = log(d, '2026-09-23T07:00', 'push-up', 22).data; // ties, does not beat
+    d = log(d, '2026-09-23T15:00', 'squat', 10).data; // no push-ups: dropped
+    d = addEntry(d, { exerciseId: 'push-up', at: '2026-09-23T20:00', amount: { seconds: 30 } }).data;
+
+    const only = sessionsWithExercise(d.sessions, 'push-up');
+    expect(only).toHaveLength(3);
+    expect(only.every((s) => s.entries.every((e) => e.exerciseId === 'push-up'))).toBe(true);
+    expect(totalsOf(only)).toMatchObject({ reps: 44, seconds: 30, entries: 4 });
+
+    const pb = personalBests(only);
+    expect(pb.sessionReps).toMatchObject({ date: '2026-09-22', startedAt: '2026-09-22T07:00', value: 22 });
+    expect(pb.sessionSeconds).toMatchObject({ date: '2026-09-23', value: 30 });
+    expect(personalBests([]).sessionReps).toBeNull();
   });
 });

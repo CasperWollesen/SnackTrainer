@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, daysBetween, eachDay, isISODate, isLocalDateTime, minutesBetween, weekdayOf } from './dates';
+import { addDays, daysBetween, eachDay, isISODate, isLocalDateTime, isoWeekNumber, minutesBetween, startOfWeek, weekdayOf } from './dates';
 
 describe('dates', () => {
   it('validates', () => {
@@ -28,5 +28,18 @@ describe('dates', () => {
     expect(minutesBetween('2026-09-23T07:30', '2026-09-23T07:50')).toBe(20);
     expect(minutesBetween('2026-09-23T23:50', '2026-09-24T00:10')).toBe(20);
     expect(minutesBetween('2026-09-23T08:00', '2026-09-23T07:00')).toBe(-60);
+  });
+
+  it('finds the ISO week start and number', () => {
+    expect(startOfWeek('2026-09-23')).toBe('2026-09-21'); // Wednesday -> Monday
+    expect(startOfWeek('2026-09-21')).toBe('2026-09-21');
+    expect(startOfWeek('2026-09-27')).toBe('2026-09-21'); // Sunday belongs to the week before
+    expect(startOfWeek('2027-01-01')).toBe('2026-12-28');
+    expect(isoWeekNumber('2026-09-23')).toBe(39);
+    expect(isoWeekNumber('2026-01-01')).toBe(1); // Thursday
+    expect(isoWeekNumber('2026-12-31')).toBe(53);
+    expect(isoWeekNumber('2027-01-03')).toBe(53); // Sunday still in 2026's last week
+    expect(isoWeekNumber('2027-01-04')).toBe(1);
+    expect(isoWeekNumber('2021-01-03')).toBe(53);
   });
 });

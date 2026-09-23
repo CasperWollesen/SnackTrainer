@@ -1,22 +1,54 @@
-import { weekdayOf } from '../../domain/dates';
+import { addDays, isoWeekNumber, weekdayOf } from '../../domain/dates';
 import type { ISODate } from '../../domain/types';
-import { weekdayShort } from '../format';
+import { texts } from '../../texts';
+import { formatDayShort, weekdayShort } from '../format';
 
-export interface ChartDay {
-  date: ISODate;
+export interface ChartBar {
+  /** Stable key, also what `selected` / `onSelect` refer to (a date or a week start). */
+  id: string;
   value: number;
+  axisLabel: string;
+  /** Screen-reader name of the bar, without the value. */
+  name: string;
+  /** Today's bar or the current week's bar. */
+  current?: boolean;
+  /** Drawn a little lighter (weekends in day charts). */
+  muted?: boolean;
 }
 
 export interface BarChartProps {
-  days: ChartDay[];
-  today: ISODate;
-  selected: ISODate | null;
-  onSelect: (date: ISODate) => void;
+  bars: ChartBar[];
+  selected: string | null;
+  onSelect: (id: string) => void;
   /** Colour scheme: reps (accent) or time (blue). */
   tone: 'reps' | 'time';
   /** Formats a value for the gridline labels and bar tooltips. */
   format: (value: number) => string;
   label: string;
+}
+
+/** One bar per day: weekday initials for up to two weeks, day of month beyond that. */
+export function dayBars(days: readonly { date: ISODate; value: number }[], today: ISODate): ChartBar[] {
+  const short = days.length <= 14;
+  return days.map((d) => ({
+    id: d.date,
+    value: d.value,
+    axisLabel: short ? weekdayShort(d.date).slice(0, 2) : String(Number(d.date.slice(8, 10))),
+    name: formatDayShort(d.date),
+    current: d.date === today,
+    muted: weekdayOf(d.date) >= 6,
+  }));
+}
+
+/** One bar per ISO week, labelled with the week number. */
+export function weekBars(weeks: readonly { weekStart: ISODate; value: number }[], today: ISODate): ChartBar[] {
+  return weeks.map((w) => ({
+    id: w.weekStart,
+    value: w.value,
+    axisLabel: String(isoWeekNumber(w.weekStart)),
+    name: `${texts.history.week(isoWeekNumber(w.weekStart))}, ${formatDayShort(w.weekStart)}`,
+    current: w.weekStart <= today && today <= addDays(w.weekStart, 6),
+  }));
 }
 
 /** Evenly spaced "nice" gridline values from 0 to max (inclusive). */
@@ -38,14 +70,14 @@ function niceMax(max: number): number {
 }
 
 /**
- * Per-day bar chart rendered with plain HTML/CSS, ported from PowerOn's chart.js.
+ * Bar chart rendered with plain HTML/CSS, ported from PowerOn's chart.js.
  * The Y axis is fixed to a nice maximum so the range reads at a glance.
  */
-export function BarChart({ days, today, selected, onSelect, tone, format, label }: BarChartProps) {
-  const rawMax = Math.max(0, ...days.map((d) => d.value));
+export function BarChart({ bars, selected, onSelect, tone, format, label }: BarChartProps) {
+  const rawMax = Math.max(0, ...bars.map((d) => d.value));
   const max = niceMax(rawMax);
   const ticks = gridTicks(max);
-  const n = days.length;
+  const n = bars.length;
   // Show every axis label when there is room; otherwise every other (or every 7th).
   const labelEvery = n <= 14 ? 1 : n <= 28 ? 2 : 7;
 
@@ -59,27 +91,27 @@ export function BarChart({ days, today, selected, onSelect, tone, format, label 
         ))}
       </div>
       <div className="chart__bars">
-        {days.map((d) => {
+        {bars.map((d) => {
           const pct = max > 0 ? (Math.min(d.value, max) / max) * 100 : 0;
-          const wd = weekdayOf(d.date);
           const classes = [
             'chart__bar',
             d.value === 0 ? 'chart__bar--empty' : '',
-            d.date === today ? 'chart__bar--today' : '',
-            d.date === selected ? 'chart__bar--selected' : '',
-            wd >= 6 ? 'chart__bar--weekend' : '',
+            d.current ? 'chart__bar--today' : '',
+            d.id === selected ? 'chart__bar--selected' : '',
+            d.muted ? 'chart__bar--weekend' : '',
           ]
             .filter(Boolean)
             .join(' ');
           return (
             <button
-              key={d.date}
+              key={d.id}
               type="button"
               className={classes}
               style={{ ['--h' as string]: `${pct}%` }}
-              aria-label={`${d.date} · ${format(d.value)}`}
-              aria-pressed={d.date === selected}
-              onClick={() => onSelect(d.date)}
+              aria-label={`${d.name} · ${format(d.value)}`}
+              title={`${d.name} · ${format(d.value)}`}
+              aria-pressed={d.id === selected}
+              onClick={() => onSelect(d.id)}
             >
               <span className="chart__fill" />
             </button>
@@ -87,9 +119,9 @@ export function BarChart({ days, today, selected, onSelect, tone, format, label 
         })}
       </div>
       <div className="chart__axis" aria-hidden="true">
-        {days.map((d, i) => (
-          <span key={d.date} className={i % labelEvery === 0 ? '' : 'chart__axis-hidden'}>
-            {n <= 14 ? weekdayShort(d.date).slice(0, 2) : String(Number(d.date.slice(8, 10)))}
+        {bars.map((d, i) => (
+          <span key={d.id} className={i % labelEvery === 0 ? '' : 'chart__axis-hidden'}>
+            {d.axisLabel}
           </span>
         ))}
       </div>

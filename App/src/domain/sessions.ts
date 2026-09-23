@@ -1,4 +1,4 @@
-import { compareISO, dateOf, eachDay, minutesBetween } from './dates';
+import { addDays, compareISO, dateOf, eachDay, minutesBetween, startOfWeek } from './dates';
 import { newId } from './ids';
 import type { AppData, Entry, ISODate, LocalDateTime, Session } from './types';
 
@@ -162,6 +162,73 @@ export function dailyTotals(data: Pick<AppData, 'sessions'>, from: ISODate, to: 
     else byDate.set(s.date, [s]);
   }
   return eachDay(from, to).map((date) => ({ date, ...totalsOf(byDate.get(date) ?? []) }));
+}
+
+export interface WeekTotals extends Totals {
+  /** Monday of the ISO week. */
+  weekStart: ISODate;
+  /** Days in the week with at least one entry. */
+  activeDays: number;
+}
+
+/**
+ * One row per ISO week (Monday–Sunday) overlapping the range, including empty weeks.
+ * Only days inside `from`..`to` are counted, so a partial first or current week is partial.
+ */
+export function weeklyTotals(data: Pick<AppData, 'sessions'>, from: ISODate, to: ISODate): WeekTotals[] {
+  const weeks: WeekTotals[] = [];
+  for (let week = startOfWeek(from); compareISO(week, to) <= 0; week = addDays(week, 7)) {
+    const start = compareISO(week, from) < 0 ? from : week;
+    const endOfWeek = addDays(week, 6);
+    const end = compareISO(endOfWeek, to) > 0 ? to : endOfWeek;
+    const days = dailyTotals(data, start, end);
+    const sessions = sessionsBetween(data, start, end);
+    weeks.push({ weekStart: week, ...totalsOf(sessions), activeDays: days.filter((d) => d.entries > 0).length });
+  }
+  return weeks;
+}
+
+/**
+ * The sessions narrowed to one exercise: each keeps only that exercise's entries,
+ * sessions without it are dropped. Lets every total/chart helper work per exercise.
+ */
+export function sessionsWithExercise(sessions: readonly Session[], exerciseId: string): Session[] {
+  const out: Session[] = [];
+  for (const s of sessions) {
+    const entries = s.entries.filter((e) => e.exerciseId === exerciseId);
+    if (entries.length > 0) out.push({ ...s, entries });
+  }
+  return out;
+}
+
+export interface SessionBest {
+  sessionId: string;
+  date: ISODate;
+  startedAt: LocalDateTime;
+  value: number;
+}
+
+export interface PersonalBests {
+  /** Most reps in one session (summed over its entries), or null when never logged in reps. */
+  sessionReps: SessionBest | null;
+  /** Longest total time in one session, or null when never logged in time. */
+  sessionSeconds: SessionBest | null;
+}
+
+/**
+ * Personal bests per session. Pass sessions already narrowed with `sessionsWithExercise`.
+ * Ties keep the earliest session: the record was set there.
+ */
+export function personalBests(sessions: readonly Session[]): PersonalBests {
+  let sessionReps: SessionBest | null = null;
+  let sessionSeconds: SessionBest | null = null;
+  for (const s of sessions) {
+    const t = totalsOf([s]);
+    const base = { sessionId: s.id, date: s.date, startedAt: s.startedAt };
+    if (t.reps > 0 && (!sessionReps || t.reps > sessionReps.value)) sessionReps = { ...base, value: t.reps };
+    if (t.seconds > 0 && (!sessionSeconds || t.seconds > sessionSeconds.value)) sessionSeconds = { ...base, value: t.seconds };
+  }
+  return { sessionReps, sessionSeconds };
 }
 
 export interface ExerciseTotals {

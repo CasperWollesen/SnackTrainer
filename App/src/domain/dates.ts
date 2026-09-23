@@ -94,6 +94,21 @@ export function weekdayOf(iso: ISODate): number {
   return jsDay === 0 ? 7 : jsDay;
 }
 
+/** Monday of the ISO week containing `iso`. */
+export function startOfWeek(iso: ISODate): ISODate {
+  return addDays(iso, 1 - weekdayOf(iso));
+}
+
+/**
+ * ISO 8601 week number (1–53). Week 1 is the week with the year's first Thursday,
+ * so 2026-12-31 can be week 53 and 2027-01-01 still week 53 of 2026.
+ */
+export function isoWeekNumber(iso: ISODate): number {
+  const thursday = addDays(iso, 4 - weekdayOf(iso));
+  const jan1 = `${thursday.slice(0, 4)}-01-01`;
+  return Math.floor(daysBetween(jan1, thursday) / 7) + 1;
+}
+
 /** Lexicographic comparison works for YYYY-MM-DD and YYYY-MM-DDTHH:MM strings. */
 export function compareISO(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;

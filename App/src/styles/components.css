@@ -739,15 +739,16 @@
   bottom: 0;
   height: 18px;
   display: grid;
-  grid-template-columns: repeat(var(--n), 1fr);
+  /* minmax(0, …) keeps columns aligned with the bars; a visible label may spill over its hidden neighbours. */
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
   gap: 3px;
 }
 
 .chart__axis span {
+  display: flex;
+  justify-content: center;
   font-size: 0.62rem;
   color: var(--text-3);
-  text-align: center;
-  overflow: hidden;
   white-space: nowrap;
 }
 

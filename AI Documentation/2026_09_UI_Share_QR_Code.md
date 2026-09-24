@@ -1,22 +1,22 @@
-# Share QR Code (Settings → Share)
+# Share QR Code (Menu → Share)
 
 Documentation ID: `UI-SHARE-QR-CODE`
-File revision: `2026_09_r1`
-Last reviewed: `2026-09-23`
+File revision: `2026_09_r2`
+Last reviewed: `2026-09-24`
 
 Related code:
 - `App/src/domain/qr.ts` — dependency-free QR encoder (`qrMatrix`)
 - `App/src/domain/qr.test.ts` — known vectors and an independent round-trip reader
 - `App/src/ui/components/QrCode.tsx` — renders the matrix as SVG
-- `App/src/ui/views/SettingsSheet.tsx` — `ShareGroup`, the last section after About
-- `App/src/texts.ts` — `SHARE_URL` and `texts.settings.share`
+- `App/src/ui/views/ShareSheet.tsx` — the Share sheet (menu item; was a Settings section until 2026-09-24)
+- `App/src/texts.ts` — `SHARE_URL` and `texts.share`
 
 Related documentation:
 - `[Planning]/SnackTrainer Vision & Plan v1.md` (`PLANNING-VISION-V1`) — decision 10
 
 ## Short Version
 
-The last section of Settings, "Share", shows a QR code for `SHARE_URL`
+The Share sheet (Menu → Share, sidebar on desktop) shows a QR code for `SHARE_URL`
 (`https://CasperWollesen.github.io/SnackTrainer/`), the address as a link, and one button. The button
 opens the system share sheet where `navigator.share` exists (phones) and copies the link elsewhere.
 Only the link is shared, never data.

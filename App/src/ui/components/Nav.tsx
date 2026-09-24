@@ -1,13 +1,22 @@
-import { BarChart3, Dumbbell, Menu, Plus, Settings, Sun, Zap } from 'lucide-react';
+import { BarChart3, Dumbbell, Menu, Plus, Sun, Zap, type LucideIcon } from 'lucide-react';
 import { texts } from '../../texts';
 
 export type Tab = 'today' | 'history' | 'exercises';
+
+/** A destination that is not a tab (Settings, Share, …). */
+export interface NavLink {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  onSelect: () => void;
+}
 
 export interface NavProps {
   active: Tab;
   onChange: (tab: Tab) => void;
   onLog: () => void;
-  onSettings: () => void;
+  /** Shown at the bottom of the desktop sidebar; phones reach them through the menu sheet. */
+  links: NavLink[];
   /** Opens the phone menu sheet (Exercises, Settings, …). */
   onMenu: () => void;
 }
@@ -25,7 +34,7 @@ const PHONE_TABS: Tab[] = ['today', 'history'];
  * Sidebar on desktop with every destination; on phones a bottom bar with the main tabs and a
  * Menu button (CSS decides which shows). The menu's items are defined in App (MenuSheet).
  */
-export function Nav({ active, onChange, onLog, onSettings, onMenu }: NavProps) {
+export function Nav({ active, onChange, onLog, links, onMenu }: NavProps) {
   const inMenu = !PHONE_TABS.includes(active);
   return (
     <>
@@ -49,10 +58,12 @@ export function Nav({ active, onChange, onLog, onSettings, onMenu }: NavProps) {
           {texts.add.log}
         </button>
         <div className="sidebar__spacer" />
-        <button type="button" className="sidebar__item" onClick={onSettings}>
-          <Settings size={20} aria-hidden="true" />
-          {texts.settings.title}
-        </button>
+        {links.map(({ id, label, icon: Icon, onSelect }) => (
+          <button key={id} type="button" className="sidebar__item" onClick={onSelect}>
+            <Icon size={20} aria-hidden="true" />
+            {label}
+          </button>
+        ))}
       </aside>
 
       <button type="button" className="fab" onClick={onLog}>

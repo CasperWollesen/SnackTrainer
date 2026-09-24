@@ -1,8 +1,11 @@
 import { upgradeAppData, validateAppData } from '../domain/backup';
+import { parseSplashState, type SplashState } from '../domain/splash';
 import { emptyData, type AppData, type Exercise, type Settings } from '../domain/types';
 import { loadRaw, removeRaw, requestPersistentStorage, saveRaw } from './storage';
 
 const DATA_KEY = 'data';
+/** Device-local UI state, kept outside AppData: not part of backups, not cleared by "delete everything". */
+const SPLASH_KEY = 'splash';
 
 type Listener = (data: AppData) => void;
 
@@ -80,6 +83,19 @@ class Repository {
         : [...d.customExercises, exercise];
       return { ...d, customExercises };
     });
+  }
+
+  getSplashState(): SplashState {
+    const raw = loadRaw(SPLASH_KEY);
+    try {
+      return parseSplashState(raw === null ? null : JSON.parse(raw));
+    } catch {
+      return parseSplashState(null);
+    }
+  }
+
+  setSplashState(state: SplashState): void {
+    saveRaw(SPLASH_KEY, JSON.stringify(state));
   }
 
   deleteCustomExercise(id: string): AppData {

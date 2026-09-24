@@ -1,4 +1,4 @@
-import { Dumbbell, FlaskConical, Settings, Smartphone, X } from 'lucide-react';
+import { Dumbbell, FlaskConical, QrCode, Settings, Smartphone, Sparkles, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { hasDemoData } from './domain/demo';
 import { findEntry } from './domain/sessions';
@@ -15,6 +15,7 @@ import { useAppData } from './ui/hooks/useAppData';
 import { useClock } from './ui/hooks/useClock';
 import { useInstallPrompt } from './ui/hooks/useInstallPrompt';
 import { useNow } from './ui/hooks/useNow';
+import { useSplash } from './ui/hooks/useSplash';
 import { ToastProvider, useToast } from './ui/hooks/useToast';
 import { useActions } from './ui/useActions';
 import { EntrySheet } from './ui/views/EntrySheet';
@@ -25,6 +26,8 @@ import { HistoryView, initialHistoryState, type HistoryState } from './ui/views/
 import { LogSheet } from './ui/views/LogSheet';
 import { MenuSheet, type MenuItem } from './ui/views/MenuSheet';
 import { SettingsSheet } from './ui/views/SettingsSheet';
+import { ShareSheet } from './ui/views/ShareSheet';
+import { SplashScreen } from './ui/views/SplashScreen';
 import { TodayView } from './ui/views/TodayView';
 
 type Overlay =
@@ -34,6 +37,7 @@ type Overlay =
   | { kind: 'exercise'; exercise: Exercise | null }
   | { kind: 'exerciseInfo'; exerciseId: string }
   | { kind: 'settings' }
+  | { kind: 'share' }
   | { kind: 'menu' };
 
 export function App() {
@@ -51,6 +55,7 @@ function Shell() {
   const actions = useActions();
   const install = useInstallPrompt();
   const toast = useToast();
+  const splash = useSplash(today);
   const [tab, setTab] = useState<Tab>('today');
   const [date, setDate] = useState<ISODate>(today);
   const [overlay, setOverlay] = useState<Overlay>({ kind: 'none' });
@@ -104,12 +109,24 @@ function Shell() {
       hint: texts.nav.exercisesHint,
       icon: Dumbbell,
       current: tab === 'exercises',
+      isTab: true,
       onSelect: () => {
         setTab('exercises');
         closeOverlay();
       },
     },
     { id: 'settings', label: texts.settings.title, hint: texts.nav.settingsHint, icon: Settings, onSelect: () => setOverlay({ kind: 'settings' }) },
+    { id: 'share', label: texts.share.title, hint: texts.nav.shareHint, icon: QrCode, onSelect: () => setOverlay({ kind: 'share' }) },
+    {
+      id: 'splash',
+      label: texts.splash.title,
+      hint: texts.nav.splashHint,
+      icon: Sparkles,
+      onSelect: () => {
+        closeOverlay();
+        splash.replay();
+      },
+    },
   ];
 
   return (
@@ -118,7 +135,7 @@ function Shell() {
         active={tab}
         onChange={setTab}
         onLog={() => openLog(null)}
-        onSettings={() => setOverlay({ kind: 'settings' })}
+        links={menuItems.filter((item) => !item.isTab)}
         onMenu={() => setOverlay({ kind: 'menu' })}
       />
 
@@ -237,6 +254,10 @@ function Shell() {
       <MenuSheet open={overlay.kind === 'menu'} items={menuItems} onClose={closeOverlay} />
 
       <SettingsSheet open={overlay.kind === 'settings'} data={data} onClose={closeOverlay} install={install} onDemo={actions.setDemo} />
+
+      <ShareSheet open={overlay.kind === 'share'} onClose={closeOverlay} />
+
+      <SplashScreen splash={splash.current} onClose={splash.close} />
     </div>
   );
 }

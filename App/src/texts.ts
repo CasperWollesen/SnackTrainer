@@ -4,7 +4,7 @@
  */
 export const APP_NAME = 'SnackTrainer';
 
-/** Public address of the deployed app, shown as a QR code in Settings → Share. */
+/** Public address of the deployed app, shown as a QR code in Menu → Share. */
 export const SHARE_URL = 'https://CasperWollesen.github.io/SnackTrainer/';
 
 export const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
@@ -52,7 +52,36 @@ export const texts = {
     mainMenu: 'Main menu',
     menu: 'Menu',
     exercisesHint: 'Catalogue, your own exercises, hidden ones',
-    settingsHint: 'Backup, demo data, sharing, install',
+    settingsHint: 'Backup, demo data, install',
+    shareHint: 'QR code and link for a friend',
+    splashHint: 'Replay the intro',
+  },
+  splash: {
+    title: 'Splash screen',
+    skip: 'Skip',
+    /**
+     * One is shown per splash, in this order (the first on the very first launch), then round again.
+     * Add more at the end; nothing else needs to change.
+     */
+    messages: [
+      { title: 'Exercise snacks, logged in seconds.', body: 'A few squats while the kettle boils, a plank before lunch. Tap Log, pick an exercise, done.' },
+      { title: '100% private.', body: 'Everything stays on this phone. No account, no server, no tracking. Only you see your snacks.' },
+      { title: 'Made by Casper Wollesen.', body: 'Built for my own snacks between everything else. Now it is yours too. Enjoy!' },
+      { title: 'Small snacks add up.', body: 'Ten push-ups five times a day is 350 a week, without ever changing clothes.' },
+      { title: 'Two reps beat zero reps.', body: 'No warm-up, no gym bag, no excuses. Just a little movement, right now.' },
+      { title: 'Works offline.', body: 'Add it to your home screen and it opens like an app, signal or not.' },
+      { title: 'Time a whole snack.', body: 'Start a snack session and everything you log lands together, with the clock running.' },
+      { title: 'Stretching counts too.', body: 'Hold a hip flexor stretch for a minute and log it. Your back will thank you.' },
+    ],
+  },
+  share: {
+    title: 'Share',
+    description: 'Let someone scan this code to open SnackTrainer on their phone. Only the link is shared, never your data.',
+    qrLabel: (url: string) => `QR code for ${url}`,
+    button: 'Share link',
+    copy: 'Copy link',
+    copied: 'Link copied',
+    copyFailed: 'Could not copy. Select the address above instead.',
   },
   tabs: { today: 'Today', history: 'History', exercises: 'Exercises' },
   add: { log: 'Log' },
@@ -332,15 +361,6 @@ export const texts = {
       title: 'About',
       version: (v: string) => `Version ${v}`,
       offline: 'No account, no server. Data lives in this browser only.',
-    },
-    share: {
-      title: 'Share',
-      description: 'Let someone scan this code to open SnackTrainer on their phone. Only the link is shared, never your data.',
-      qrLabel: (url: string) => `QR code for ${url}`,
-      button: 'Share link',
-      copy: 'Copy link',
-      copied: 'Link copied',
-      copyFailed: 'Could not copy. Select the address above instead.',
     },
   },
 } as const;

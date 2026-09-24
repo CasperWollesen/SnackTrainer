@@ -1,8 +1,8 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r8`
-Last reviewed: `2026-09-23`
+File revision: `2026_09_r9`
+Last reviewed: `2026-09-24`
 
 Related repositories (inspiration, not dependencies):
 - `C:\Development\GitHub\Conrad` – React/Vite/PWA shell, design tokens, sheet/toast/nav components, backup pattern.
@@ -43,8 +43,8 @@ counting, weights, social features, streak gamification.
 **Hidden exercises** are left out of the pickers and Recent; a search still finds them under a "Hidden" group. Their entries count everywhere as before.
 
 Phones have a bottom bar with **Today · History · Menu**. Menu opens a sheet listing the other
-destinations (Exercises, Settings); new ones are added to `menuItems` in `App.tsx` without touching
-the bar. Desktop has a sidebar with every destination. A floating **Log** button is always present on
+destinations (Exercises, Settings, Share, Splash screen); new ones are added to `menuItems` in `App.tsx`
+without touching the bar. Desktop has a sidebar with every destination. A floating **Log** button is always present on
 phones (sidebar button on desktop).
 
 ### Logging flow
@@ -77,9 +77,17 @@ behind. Stop and auto-stop have Undo (the timer runs on). The quick Log button i
 
 Install hint (iOS: Share → Add to Home Screen; Chromium: install prompt), session gap, export /
 import backup (JSON, validated, preview, replace-all), **demo data** (add / refresh / remove),
-delete everything, about, and **Share**: a QR
-code for the public address (`https://CasperWollesen.github.io/SnackTrainer/`) plus a Share / Copy
-link button. Only the link is shared, never data.
+delete everything, about.
+
+### Share and splash screen
+
+**Share** (menu): a QR code for the public address (`https://CasperWollesen.github.io/SnackTrainer/`)
+plus a Share / Copy link button. Only the link is shared, never data.
+
+**Splash screen**: a full-screen intro with an exercise emoji changing every second (5×) and one
+message from `texts.splash.messages` (what it is, 100% private, who made it, fun ones). Skip is a
+filling progress bar; it closes itself after 5 s. Shown on the first 5 launches, then on the first
+launch each day; replay from the menu.
 
 ## Key Decisions
 
@@ -129,6 +137,9 @@ link button. Only the link is shared, never data.
 14. **Stretching is a built-in category** (SnackTrainer's own, not from MuscleUp): a general
     "Stretching" plus specific stretches, timed by default except the flowing ones (Cat-Cow, World's
     Greatest Stretch).
+15. **The splash state is device-local UI state outside `AppData`** (`snacktrainer.splash`:
+    `shownCount`, `lastShownDate`), read and written only by `repository.ts`. No data version bump, not in
+    backups, not reset by "delete everything". Share moved from Settings to its own menu item.
 
 ## Data Model
 
@@ -201,7 +212,7 @@ ui/
   components/            Button, Sheet, Nav, Toast, EmptyState, Section, StatTiles,
                          BarChart, Counter, Stopwatch, UpdateBanner
   views/                 TodayView, HistoryView, ExercisesView, LogSheet, EntrySheet,
-                         ExerciseEditor, SettingsSheet
+                         ExerciseEditor, SettingsSheet, ShareSheet, SplashScreen
   hooks/                 useAppData (store subscription), useClock, useToast, useInstallPrompt
 styles/                  tokens.css, base.css, components.css, views.css
 ```
@@ -245,6 +256,11 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 - [x] Start / Stop a timed snack session, bar with timer on every tab, auto-stop at last activity
 - [x] Auto-stop minutes in Settings, duration on Today and in Nerd view, demo sessions with durations
 - [x] Stretching exercises (general and specific)
+
+### Milestone 5 – Onboarding
+
+- [x] Splash screen: 5 first launches then daily, changing emojis, rotating messages, Skip with progress
+- [x] Menu: Exercises · Settings · Share · Splash screen (Share moved out of Settings)
 
 ### Ideas parked (not planned)
 

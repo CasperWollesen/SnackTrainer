@@ -1,15 +1,14 @@
-import { ChevronRight, type LucideIcon } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { texts } from '../../texts';
+import type { NavLink } from '../components/Nav';
 import { Sheet } from '../components/Sheet';
 
-export interface MenuItem {
-  id: string;
-  label: string;
+export interface MenuItem extends NavLink {
   hint?: string;
-  icon: LucideIcon;
   /** Marks the item for the tab currently shown. */
   current?: boolean;
-  onSelect: () => void;
+  /** The item is a tab the desktop sidebar already lists. */
+  isTab?: boolean;
 }
 
 export interface MenuSheetProps {

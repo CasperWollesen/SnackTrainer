@@ -1,8 +1,8 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r9`
-Last reviewed: `2026-09-24`
+File revision: `2026_09_r10`
+Last reviewed: `2026-09-25`
 
 Related repositories (inspiration, not dependencies):
 - `C:\Development\GitHub\Conrad` – React/Vite/PWA shell, design tokens, sheet/toast/nav components, backup pattern.
@@ -36,7 +36,7 @@ counting, weights, social features, streak gamification.
 |---|---|
 | **Today** | The selected day (default today) with ← / → to step back and forth. Stat tiles (reps, time, sessions) and the list of sessions, each with its clock time and the entries logged in it ("07:30 · 20 Push-Up"). Tap an entry to edit or delete it. |
 | **History** | Period: **Day** (default), **Week** (ISO, Mon–Sun), **Month**, rolling **7 days** / **31 days**, with ← / → back in time and "Now". Exercise filter and Reps / Time / Sessions metric. Stat tiles with change against the previous period (running week/month compared "so far"), a breakdown chart (by hour for a day, by day otherwise; tapping a day opens it as a Day), a trend over the last 12–14 periods (tap to jump), the active days (open on Today) and a per-exercise breakdown with change (opens the exercise page). A **Nerd view** toggle adds averages, records, time-of-day and weekday charts, streaks and all-time totals. |
-| **Exercises** | Search box, "Recent" first, then all visible exercises grouped by category. Tapping an exercise opens its **exercise page**. Custom exercises can be added. "Hide N unused" hides every never-logged built-in at once; a "Hidden" section lists hidden exercises with "Show all". |
+| **Exercises** | Search box, "Recent" first (every exercise used so far, one per row, most recently used at the top), then all visible exercises grouped by category. Tapping an exercise opens its **exercise page**. Custom exercises can be added. "Hide N unused" hides every never-logged built-in at once; a "Hidden" section lists hidden exercises with "Show all". |
 
 **Exercise page** (sheet): totals, sessions, best session (most reps or longest time summed over one session) and best set (single entry), a 4-week daily / 26-week weekly chart and every session with the exercise (the best one marked; tapping one opens that day). Footer: Hide / Show again, Edit (custom only), Log.
 
@@ -49,7 +49,8 @@ phones (sidebar button on desktop).
 
 ### Logging flow
 
-1. Tap **Log** → pick an exercise (search or recent).
+1. Tap **Log** → pick an exercise (search, or the Recent list: every exercise used so far, one per row,
+   most recently used right under the search box, then the full catalogue).
 2. Enter the amount:
    - **Reps** mode: big number, − / +, quick +5 / +10, or type the total.
    - **Time** mode: stopwatch (start / pause / reset) or typed mm:ss.

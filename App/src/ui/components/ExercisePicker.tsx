@@ -18,17 +18,17 @@ export interface ExercisePickerProps {
 }
 
 /**
- * Search box, recent chips and the catalogue grouped by category. Hidden exercises are left
- * out, except that a search also lists hidden matches in a trailing "Hidden" group.
+ * Search box, every exercise used so far (most recently used first, right under the search box)
+ * and the catalogue grouped by category. Hidden exercises are left out, except that a search also
+ * lists hidden matches in a trailing "Hidden" group.
  */
 export function ExercisePicker({ data, onPick, renderSide, selectedId = null, autoFocus = false, extra }: ExercisePickerProps) {
   const [query, setQuery] = useState('');
   const exercises = useMemo(() => visibleExercises(data), [data]);
   const recent = useMemo(() => {
     const visible = new Set(exercises.map((e) => e.id));
-    return recentExerciseIds(data, 6 + data.settings.hiddenExerciseIds.length)
+    return recentExerciseIds(data, Infinity)
       .filter((id) => visible.has(id))
-      .slice(0, 6)
       .map((id) => findExercise(data, id))
       .filter((e): e is Exercise => Boolean(e));
   }, [data, exercises]);
@@ -39,6 +39,22 @@ export function ExercisePicker({ data, onPick, renderSide, selectedId = null, au
     const visibleGroups = groupByCategory(matches);
     return hiddenMatches.length > 0 ? [...visibleGroups, { category: texts.exercises.hiddenMatches, exercises: hiddenMatches }] : visibleGroups;
   }, [matches, hiddenMatches]);
+
+  const row = (e: Exercise) => (
+    <button key={e.id} type="button" className="exercise-row" aria-pressed={e.id === selectedId} onClick={() => onPick(e)}>
+      <span className="entry__emoji" aria-hidden="true">
+        {e.emoji || '🏃'}
+      </span>
+      <span className="exercise-row__body">
+        <span className="exercise-row__name">{e.name}</span>
+        {renderSide ? <span className="exercise-row__meta">{renderSide(e)}</span> : null}
+      </span>
+      <span className="exercise-row__side">
+        {e.mode === 'time' ? <Timer size={16} aria-label={texts.common.time} /> : null}
+        <ChevronRight size={18} aria-hidden="true" />
+      </span>
+    </button>
+  );
 
   return (
     <div className="form">
@@ -60,18 +76,9 @@ export function ExercisePicker({ data, onPick, renderSide, selectedId = null, au
       {extra}
 
       {!searching && recent.length > 0 ? (
-        <div className="section">
-          <div className="section__header">
-            <h3 className="section__title">{texts.exercises.recent}</h3>
-          </div>
-          <div className="chips">
-            {recent.map((e) => (
-              <button key={e.id} type="button" className="chip" aria-pressed={e.id === selectedId} onClick={() => onPick(e)}>
-                <span aria-hidden="true">{e.emoji}</span>
-                {e.name}
-              </button>
-            ))}
-          </div>
+        <div className="exercise-group">
+          <div className="exercise-group__title">{texts.exercises.recent}</div>
+          {recent.map(row)}
         </div>
       ) : null}
 
@@ -80,21 +87,7 @@ export function ExercisePicker({ data, onPick, renderSide, selectedId = null, au
       {groups.map((g) => (
         <div key={g.category} className="exercise-group">
           <div className="exercise-group__title">{g.category}</div>
-          {g.exercises.map((e) => (
-            <button key={e.id} type="button" className="exercise-row" aria-pressed={e.id === selectedId} onClick={() => onPick(e)}>
-              <span className="entry__emoji" aria-hidden="true">
-                {e.emoji || '🏃'}
-              </span>
-              <span className="exercise-row__body">
-                <span className="exercise-row__name">{e.name}</span>
-                {renderSide ? <span className="exercise-row__meta">{renderSide(e)}</span> : null}
-              </span>
-              <span className="exercise-row__side">
-                {e.mode === 'time' ? <Timer size={16} aria-label={texts.common.time} /> : null}
-                <ChevronRight size={18} aria-hidden="true" />
-              </span>
-            </button>
-          ))}
+          {g.exercises.map(row)}
         </div>
       ))}
     </div>

@@ -17,12 +17,16 @@ export interface MenuSheetProps {
   onClose: () => void;
 }
 
-/** The phone "Menu" sheet: everything that does not get its own slot in the tab bar. */
+/**
+ * The phone "Menu" sheet: everything that does not get its own slot in the tab bar.
+ * `items` are in priority order; the sheet rises from the bottom, so the list is drawn bottom-up
+ * and the first item sits closest to the thumb and the Menu button.
+ */
 export function MenuSheet({ open, items, onClose }: MenuSheetProps) {
   return (
     <Sheet open={open} onClose={onClose} title={texts.nav.menu}>
       <nav className="list" aria-label={texts.nav.menu}>
-        {items.map(({ id, label, hint, icon: Icon, current, onSelect }) => (
+        {[...items].reverse().map(({ id, label, hint, icon: Icon, current, onSelect }) => (
           <button key={id} type="button" className="dayrow menu-item" aria-current={current ? 'page' : undefined} onClick={onSelect}>
             <span className="dayrow__label menu-item__label">
               <Icon size={22} aria-hidden="true" />

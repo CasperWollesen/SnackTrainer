@@ -101,7 +101,8 @@ function Shell() {
   const infoExercise =
     overlay.kind === 'exerciseInfo' ? (findExercise(data, overlay.exerciseId) ?? unknownExercise(overlay.exerciseId)) : null;
 
-  // The phone menu. Add a destination here; the tab bar stays Today · History · Menu.
+  // The phone menu, most used first (the sheet draws it bottom-up, nearest the thumb). Add a
+  // destination here; the tab bar stays Today · History · Menu.
   const menuItems: MenuItem[] = [
     {
       id: 'exercises',

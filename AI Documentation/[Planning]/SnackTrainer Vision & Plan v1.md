@@ -44,7 +44,8 @@ counting, weights, social features, streak gamification.
 
 Phones have a bottom bar with **Today · History · Menu**. Menu opens a sheet listing the other
 destinations (Exercises, Settings, Share, Splash screen); new ones are added to `menuItems` in `App.tsx`
-without touching the bar. Desktop has a sidebar with every destination. A floating **Log** button is always present on
+without touching the bar. The sheet draws them bottom-up, so the first (Exercises) sits nearest the thumb.
+Desktop has a sidebar with every destination. A floating **Log** button is always present on
 phones (sidebar button on desktop).
 
 ### Logging flow

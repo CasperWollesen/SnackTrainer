@@ -1,14 +1,14 @@
 # Goals (per day and per week)
 
 Documentation ID: `APP-DAILY-GOALS`
-File revision: `2026_10_r3`
+File revision: `2026_10_r4`
 Last reviewed: `2026-10-15`
 
 Related code:
 - `App/src/domain/goals.ts` — `goalValueOf`, `goalRange`, `goalProgress`, `daysAllGoalsMet`, `newlyReachedGoals`, `goalStreak`, `GOAL_LIMITS`, `clampTarget`, `withGoal`, `withoutGoal`
 - `App/src/domain/goals.test.ts`
-- `App/src/domain/types.ts` — `Goal`, `GoalMetric`, `GoalPeriod`, `Settings.goals`, `DATA_VERSION = 6`
-- `App/src/domain/backup.ts` — 4 → 5 and 5 → 6 steps, `validateGoal`
+- `App/src/domain/types.ts` — `Goal`, `GoalMetric`, `GoalPeriod`, `Settings.goals`, `DATA_VERSION = 7`
+- `App/src/domain/backup.ts` — 4 → 5, 5 → 6 and 6 → 7 steps, `validateGoal`
 - `App/src/ui/components/GoalList.tsx` — rows with progress bar and streak; `goalScope` (name + emoji)
 - `App/src/ui/views/GoalsSheet.tsx`, `App/src/ui/views/GoalEditor.tsx` — list and editor (Menu → Daily goals)
 - `App/src/ui/views/TodayView.tsx` — `GoalsSection`
@@ -48,6 +48,16 @@ Verified 2026-10-15 in the dev server with stored v5 data: the existing goal cam
 a new week goal (500 reps) saved as version 6 without `dailyGoals`, Today showed "285 / 500 reps this week"
 with the pace mark at 57 % on a Thursday, and History → Week showed "Week goals: 0 of 1 met".
 
+### Bodyweight scope (added 2026-10-15, data version 7)
+
+"Counts" has **Bodyweight exercises** right after All exercises (`Goal.bodyweight: true`, at most one
+scope per goal). It counts entries whose exercise has `bodyweight: true`: the built-in flag copied
+from MuscleUp, or the toggle on a custom exercise. Entries of unknown (deleted) exercises do not count.
+Shown as "🤸 Bodyweight exercises". The 6 → 7 step changes nothing in existing goals.
+
+Verified 2026-10-15 in the dev server: stored v6 data loaded; a new bodyweight goal saved as version 7
+with `bodyweight: true` and showed "20 / 100 reps" from the day's push-ups. No console errors.
+
 ### In History
 
 Days where **every** goal was met get a green dot above their bar in the by-day chart (read out as
@@ -85,7 +95,6 @@ unit tests), and the native select's look on iOS.
 
 ## Open Items / Ideas
 
-- A bodyweight-only scope (the catalogue's `bodyweight` flag) if categories are not enough.
 
 ## Maintenance Notes
 

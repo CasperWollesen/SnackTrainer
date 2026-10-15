@@ -165,6 +165,7 @@ function validateGoal(raw: unknown): Goal | null {
   const goal: Goal = { id: raw.id, metric: raw.metric, period: raw.period === 'week' ? 'week' : 'day', target: raw.target };
   if (isNonEmptyString(raw.exerciseId)) goal.exerciseId = raw.exerciseId;
   else if (isNonEmptyString(raw.category)) goal.category = raw.category;
+  else if (raw.bodyweight === true) goal.bodyweight = true;
   return goal;
 }
 
@@ -213,6 +214,10 @@ export function upgradeAppData(raw: unknown): unknown {
     const { dailyGoals, ...settings } = isRecord(data.settings) ? data.settings : {};
     const goals = Array.isArray(dailyGoals) ? dailyGoals.map((g: unknown) => (isRecord(g) ? { ...g, period: 'day' } : g)) : [];
     data = { ...data, version: 6, settings: { ...settings, goals } };
+  }
+  if (data.version === 6) {
+    // 6 -> 7: goals may be limited to bodyweight exercises; existing goals are unchanged.
+    data = { ...data, version: 7 };
   }
   return data;
 }

@@ -5,7 +5,8 @@ import type { AppData, Entry, Goal, GoalMetric, GoalPeriod, ISODate, Session } f
 /**
  * Goals: "100 reps a day", "50 Push-Up a day", "500 reps a week", "1 h of Stretching a week".
  * A goal counts reps, time (seconds of timed entries) or sessions per day or per ISO week
- * (Monday–Sunday), over all exercises, one category or one exercise. Pure functions over AppData.
+ * (Monday–Sunday), over all exercises, bodyweight exercises, one category or one exercise.
+ * Pure functions over AppData.
  */
 
 /** Stepper limits and the default per period and metric (time in seconds). */
@@ -28,6 +29,7 @@ type GoalAppData = GoalData & Pick<AppData, 'settings'>;
 function entryCounts(data: GoalData, goal: Goal, entry: Entry): boolean {
   if (goal.exerciseId !== undefined) return entry.exerciseId === goal.exerciseId;
   if (goal.category !== undefined) return findExercise(data, entry.exerciseId)?.category === goal.category;
+  if (goal.bodyweight) return findExercise(data, entry.exerciseId)?.bodyweight === true;
   return true;
 }
 

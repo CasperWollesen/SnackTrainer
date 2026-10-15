@@ -34,6 +34,18 @@ describe('goals', () => {
     expect(p.snacks).toMatchObject({ value: 2, done: true, fraction: 1 });
   });
 
+  it('counts only bodyweight exercises for a bodyweight goal, custom ones included', () => {
+    const BODYWEIGHT: Goal = { id: 'bw', metric: 'reps', period: 'day', target: 40, bodyweight: true };
+    let d = withGoals(emptyData(), [BODYWEIGHT]);
+    d = { ...d, customExercises: [{ id: 'custom-1', name: 'Wall push', emoji: '', category: 'Custom', mode: 'reps', bodyweight: true }] };
+    d = log(d, 'push-up', '2026-10-15T07:30', { reps: 20 }); // bodyweight
+    d = log(d, 'bicep-curl', '2026-10-15T07:31', { reps: 12 }); // weights: not counted
+    d = log(d, 'custom-1', '2026-10-15T07:32', { reps: 10 }); // custom bodyweight
+    d = log(d, 'gone', '2026-10-15T07:33', { reps: 50 }); // unknown exercise: not counted
+    expect(goalProgress(d, '2026-10-15')[0]).toMatchObject({ value: 30, done: false });
+    expect(validateAppData({ version: DATA_VERSION, sessions: [], settings: { goals: [BODYWEIGHT] } })?.settings.goals).toEqual([BODYWEIGHT]);
+  });
+
   it('reports the goals a change completes', () => {
     const before = log(withGoals(emptyData(), [ALL_REPS, PUSH_UPS]), 'push-up', '2026-10-15T07:30', { reps: 25 });
     const after = log(before, 'push-up', '2026-10-15T09:00', { reps: 10 });

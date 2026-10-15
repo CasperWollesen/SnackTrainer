@@ -73,8 +73,8 @@ export type GoalPeriod = 'day' | 'week';
 
 /**
  * A goal (v5 as `dailyGoals`, v6 `goals` with `period`). `target` is reps, seconds or sessions per
- * day or per week. With `exerciseId` only that exercise counts, with `category` only exercises in
- * that category; neither means everything.
+ * day or per week. At most one scope: `exerciseId` (that exercise), `category` (exercises in it) or
+ * `bodyweight` (bodyweight exercises); none means everything.
  */
 export interface Goal {
   id: string;
@@ -83,6 +83,8 @@ export interface Goal {
   target: number;
   exerciseId?: string;
   category?: string;
+  /** v7: only exercises marked as bodyweight count (built-in flag, or set on a custom exercise). */
+  bodyweight?: true;
 }
 
 export interface Settings {
@@ -105,9 +107,10 @@ export interface Settings {
  * 2: settings.hiddenExerciseIds. 3: activeSession, Session.durationSeconds,
  * settings.sessionTimeoutMinutes. 4: count-down (activeSession.countdownSeconds,
  * settings.timerMode, settings.countdownMinutes). 5: settings.dailyGoals. 6: settings.goals
- * with a day/week period (replaces dailyGoals). Older data is upgraded by `upgradeAppData`.
+ * with a day/week period (replaces dailyGoals). 7: Goal.bodyweight. Older data is upgraded by
+ * `upgradeAppData`.
  */
-export const DATA_VERSION = 6;
+export const DATA_VERSION = 7;
 
 export interface AppData {
   version: typeof DATA_VERSION;

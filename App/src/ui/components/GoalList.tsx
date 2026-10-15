@@ -13,7 +13,7 @@ export interface GoalListProps {
   onSelect: (goal: Goal) => void;
 }
 
-/** What a goal counts, as a name and an emoji: "All exercises", "Stretching", "Push-Up". */
+/** What a goal counts, as a name and an emoji: "All exercises", "Bodyweight exercises", "Stretching", "Push-Up". */
 export function goalScope(goal: Goal, data: AppData): { name: string; emoji: string } {
   if (goal.exerciseId !== undefined) {
     const exercise = findExercise(data, goal.exerciseId);
@@ -23,6 +23,7 @@ export function goalScope(goal: Goal, data: AppData): { name: string; emoji: str
     const first = allExercises(data).find((e) => e.category === goal.category && e.emoji);
     return { name: goal.category, emoji: first?.emoji ?? '🏃' };
   }
+  if (goal.bodyweight) return { name: texts.goals.bodyweight, emoji: '🤸' };
   return { name: texts.goals.allExercises, emoji: '🎯' };
 }
 

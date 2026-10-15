@@ -100,6 +100,7 @@ export const texts = {
     },
     scope: 'Counts',
     allExercises: 'All exercises',
+    bodyweight: 'Bodyweight exercises',
     categories: 'Categories',
     categoryOption: (c: string) => `All ${c}`,
     target: { day: 'Per day', week: 'Per week' },

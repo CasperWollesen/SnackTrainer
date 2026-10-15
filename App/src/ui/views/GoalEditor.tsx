@@ -32,12 +32,13 @@ const METRICS: { value: GoalMetric; label: string }[] = [
   { value: 'sessions', label: texts.goals.metrics.sessions },
 ];
 
-/** The scope select's value: "all", "cat:<category>" or "ex:<exercise id>". */
+/** The scope select's value: "all", "bodyweight", "cat:<category>" or "ex:<exercise id>". */
 type Scope = string;
 
 function scopeOf(goal: Goal | null): Scope {
   if (goal?.exerciseId !== undefined) return `ex:${goal.exerciseId}`;
   if (goal?.category !== undefined) return `cat:${goal.category}`;
+  if (goal?.bodyweight) return 'bodyweight';
   return 'all';
 }
 
@@ -88,6 +89,7 @@ export function GoalEditor({ open, goal, data, onBack, onClose, onSave, onDelete
     const next: Goal = { id: goal?.id ?? newId(), metric, period, target: clampTarget(period, metric, target) };
     if (scope.startsWith('ex:')) next.exerciseId = scope.slice(3);
     else if (scope.startsWith('cat:')) next.category = scope.slice(4);
+    else if (scope === 'bodyweight') next.bodyweight = true;
     onSave(next);
   };
 
@@ -126,6 +128,7 @@ export function GoalEditor({ open, goal, data, onBack, onClose, onSave, onDelete
         <Field label={texts.goals.scope} htmlFor="goal-scope">
           <select id="goal-scope" className="input input--select" value={scope} onChange={(e) => changeScope(e.target.value)}>
             <option value="all">{texts.goals.allExercises}</option>
+            <option value="bodyweight">{texts.goals.bodyweight}</option>
             <optgroup label={texts.goals.categories}>
               {groups.map((g) => (
                 <option key={g.category} value={`cat:${g.category}`}>

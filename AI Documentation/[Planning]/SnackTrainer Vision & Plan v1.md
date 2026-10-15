@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_10_r17`
+File revision: `2026_10_r18`
 Last reviewed: `2026-10-15`
 
 Related repositories (inspiration, not dependencies):
@@ -162,6 +162,7 @@ launch each day; replay from the menu.
     category / exercise) in `settings.dailyGoals`, so they travel with backups. Time is timed entries,
     like the Time tile. A streak ignores an unfinished today. See `2026_10_APP_Daily_Goals.md`. Data version 5.
     Version 6 adds `period: 'day' | 'week'` (ISO week, Monday–Sunday) and renames the list to `settings.goals`.
+    Version 7 adds a bodyweight-only scope (`bodyweight: true`, the exercise's own `bodyweight` flag).
 18. **The screen stays on while a session timer runs** (Screen Wake Lock API, `ui/hooks/useWakeLock.ts`,
     same pattern as CW.ShowerTimer), so a phone on the floor does not lock and freeze a count-down. Local
     only. Notifications for a closed or locked app would need Web Push through a server, which stays a non-goal.
@@ -206,7 +207,7 @@ interface ActiveSession {    // v3: the running timer
 }
 
 interface AppData {
-  version: 6;              // ...; 3 -> 4 count-down; 4 -> 5 daily goals; 5 -> 6 goals per day/week
+  version: 7;              // ...; 4 -> 5 daily goals; 5 -> 6 goals per day/week; 6 -> 7 bodyweight goals
   sessions: Session[];        // sorted by startedAt
   customExercises: Exercise[];
   settings: {
@@ -216,7 +217,7 @@ interface AppData {
     sessionTimeoutMinutes: number; // added in version 3, default 5
     timerMode: 'up' | 'down';      // added in version 4, default 'up'
     countdownMinutes: number;      // added in version 4, default 5
-    goals: Goal[];                 // v5 as dailyGoals, v6: { id, metric: 'reps'|'time'|'sessions', period: 'day'|'week', target, exerciseId?, category? }
+    goals: Goal[];                 // v5 as dailyGoals, v6: { id, metric: 'reps'|'time'|'sessions', period: 'day'|'week', target, exerciseId? | category? | bodyweight? }
   };
   activeSession: ActiveSession | null;
 }
@@ -301,6 +302,7 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 - [x] Keep the screen on while a session timer runs (wake lock)
 - [x] Start sheet (choose Count up / Count-down) and Discard a running session (with Undo)
 - [x] Weekly goals (ISO week): "this week" progress with an even-pace mark, week streaks, History week line
+- [x] Bodyweight-only goal scope
 
 ### Ideas parked (not planned)
 

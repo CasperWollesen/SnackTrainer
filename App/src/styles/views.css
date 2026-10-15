@@ -904,3 +904,23 @@
   border-radius: 50%;
   background: var(--success);
 }
+
+/* Week goals: a "Week" tag and the even-pace mark on the bar */
+.goal__period {
+  margin-left: var(--space-2);
+  vertical-align: 1px;
+}
+
+.goal__bar {
+  position: relative;
+}
+
+.goal__pace {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text-2);
+  border-radius: 1px;
+}

@@ -16,7 +16,7 @@ import { dateOf } from '../domain/dates';
 import { findExercise, unknownExercise, withHidden } from '../domain/exercises';
 import { newlyReachedGoals, withGoal, withoutGoal } from '../domain/goals';
 import { addEntry, deleteEntry, findEntry, restoreEntry, updateEntry, type Amount, type NewEntry } from '../domain/sessions';
-import type { DailyGoal, Exercise, LocalDateTime, Session } from '../domain/types';
+import type { Goal, Exercise, LocalDateTime, Session } from '../domain/types';
 import { repository } from '../storage/repository';
 import { texts } from '../texts';
 import { formatDuration, formatEntrySummary } from './format';
@@ -55,7 +55,8 @@ export function useActions() {
       const exercise = findExercise(result.data, input.exerciseId) ?? unknownExercise(input.exerciseId);
       const logged = texts.toast.logged(formatEntrySummary(result.entry, exercise));
       const reached = newlyReachedGoals(before, result.data, dateOf(result.entry.at));
-      const message = reached.length > 0 ? texts.toast.goalReached(logged, reached.map((g) => goalScope(g, result.data).name).join(', ')) : logged;
+      const names = reached.map((g) => `${goalScope(g, result.data).name}${g.period === 'week' ? ` (${texts.goals.thisWeek})` : ''}`);
+      const message = reached.length > 0 ? texts.toast.goalReached(logged, names.join(', ')) : logged;
       afterWrite(message, () => {
         repository.update((d) => deleteEntry(d, result.entry.id));
       });
@@ -86,18 +87,18 @@ export function useActions() {
   );
 
   const saveGoal = useCallback(
-    (goal: DailyGoal) => {
-      repository.setSettings({ dailyGoals: withGoal(repository.get().settings.dailyGoals, goal) });
+    (goal: Goal) => {
+      repository.setSettings({ goals: withGoal(repository.get().settings.goals, goal) });
       afterWrite(texts.toast.goalSaved);
     },
     [afterWrite],
   );
 
   const deleteGoal = useCallback(
-    (goal: DailyGoal) => {
-      const before = repository.get().settings.dailyGoals;
-      repository.setSettings({ dailyGoals: withoutGoal(before, goal.id) });
-      afterWrite(texts.toast.goalDeleted, () => repository.setSettings({ dailyGoals: before }));
+    (goal: Goal) => {
+      const before = repository.get().settings.goals;
+      repository.setSettings({ goals: withoutGoal(before, goal.id) });
+      afterWrite(texts.toast.goalDeleted, () => repository.setSettings({ goals: before }));
     },
     [afterWrite],
   );

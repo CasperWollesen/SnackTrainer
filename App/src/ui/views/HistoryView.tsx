@@ -87,7 +87,8 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
   const prevSessions = sessionsBetween(filtered, comparison.previous.from, comparison.previous.to);
 
   // Goals are about the whole day, so they use all data, not the exercise filter.
-  const hasGoals = data.settings.dailyGoals.length > 0;
+  const hasGoals = data.settings.goals.some((g) => g.period === 'day');
+  const hasWeekGoals = data.settings.goals.some((g) => g.period === 'week');
   const goalDays = useMemo(() => daysAllGoalsMet(data, period.from, period.to), [data, period.from, period.to]);
 
   const usedExercises = useMemo(() => {
@@ -141,12 +142,18 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
   // --- goals: met or not for a day, "N of M days" otherwise (elapsed days only)
   let goalsLine: string | null = null;
   if (hasGoals && isDay) {
-    const progress = goalProgress(data, period.from);
+    const progress = goalProgress(data, period.from).filter((p) => p.goal.period === 'day');
     const done = progress.filter((p) => p.done).length;
     goalsLine = done === progress.length ? texts.history.goalsMetDay : texts.history.goalsSomeMetDay(done, progress.length);
   } else if (hasGoals) {
     const elapsed = [...goalDays].filter((d) => compareISO(d, comparison.current.from) >= 0 && compareISO(d, comparison.current.to) <= 0);
     goalsLine = texts.history.goalsMetDays(elapsed.length, current.days);
+  }
+  // A week period also shows its week goals (as of the week's last elapsed day).
+  let weekGoalsLine: string | null = null;
+  if (hasWeekGoals && state.kind === 'week') {
+    const progress = goalProgress(data, comparison.current.to).filter((p) => p.goal.period === 'week');
+    weekGoalsLine = texts.history.weekGoalsMet(progress.filter((p) => p.done).length, progress.length);
   }
 
   // --- breakdown chart: hours for a day, days otherwise
@@ -236,6 +243,7 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
         {comparison.partial ? texts.history.comparedSoFar(comparedRange) : texts.history.compared(comparedRange)}
       </p>
       {goalsLine ? <p className="history__goals">{goalsLine}</p> : null}
+      {weekGoalsLine ? <p className="history__goals">{weekGoalsLine}</p> : null}
 
       <Section title={isDay ? texts.history.byHour : texts.history.byDay}>
         <div className="card">

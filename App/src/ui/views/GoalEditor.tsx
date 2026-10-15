@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { findExercise, groupByCategory, visibleExercises } from '../../domain/exercises';
 import { clampTarget, GOAL_LIMITS } from '../../domain/goals';
 import { newId } from '../../domain/ids';
-import type { AppData, DailyGoal, GoalMetric } from '../../domain/types';
+import type { AppData, Goal, GoalMetric, GoalPeriod } from '../../domain/types';
 import { texts } from '../../texts';
 import { Button, Segmented } from '../components/Button';
 import { Field, Stepper } from '../components/FormFields';
@@ -13,13 +13,18 @@ import { formatGoalAmount } from '../format';
 export interface GoalEditorProps {
   open: boolean;
   /** Existing goal to edit, or null for a new one. */
-  goal: DailyGoal | null;
+  goal: Goal | null;
   data: AppData;
   onBack: () => void;
   onClose: () => void;
-  onSave: (goal: DailyGoal) => void;
-  onDelete: (goal: DailyGoal) => void;
+  onSave: (goal: Goal) => void;
+  onDelete: (goal: Goal) => void;
 }
+
+const PERIODS: { value: GoalPeriod; label: string }[] = [
+  { value: 'day', label: texts.goals.periods.day },
+  { value: 'week', label: texts.goals.periods.week },
+];
 
 const METRICS: { value: GoalMetric; label: string }[] = [
   { value: 'reps', label: texts.goals.metrics.reps },
@@ -30,23 +35,34 @@ const METRICS: { value: GoalMetric; label: string }[] = [
 /** The scope select's value: "all", "cat:<category>" or "ex:<exercise id>". */
 type Scope = string;
 
-function scopeOf(goal: DailyGoal | null): Scope {
+function scopeOf(goal: Goal | null): Scope {
   if (goal?.exerciseId !== undefined) return `ex:${goal.exerciseId}`;
   if (goal?.category !== undefined) return `cat:${goal.category}`;
   return 'all';
 }
 
 export function GoalEditor({ open, goal, data, onBack, onClose, onSave, onDelete }: GoalEditorProps) {
+  const [period, setPeriod] = useState<GoalPeriod>('day');
   const [metric, setMetric] = useState<GoalMetric>('reps');
-  const [target, setTarget] = useState(GOAL_LIMITS.reps.initial);
+  const [target, setTarget] = useState(GOAL_LIMITS.day.reps.initial);
   const [scope, setScope] = useState<Scope>('all');
 
   useEffect(() => {
     if (!open) return;
+    setPeriod(goal?.period ?? 'day');
     setMetric(goal?.metric ?? 'reps');
-    setTarget(goal?.target ?? GOAL_LIMITS.reps.initial);
+    setTarget(goal?.target ?? GOAL_LIMITS.day.reps.initial);
     setScope(scopeOf(goal));
   }, [open, goal]);
+
+  /** The goal's own target when it matches, else the default for that period and metric. */
+  const targetFor = (p: GoalPeriod, m: GoalMetric) => (goal?.period === p && goal.metric === m ? goal.target : GOAL_LIMITS[p][m].initial);
+
+  const changePeriod = (next: GoalPeriod) => {
+    if (next === period) return;
+    setPeriod(next);
+    setTarget(targetFor(next, metric));
+  };
 
   // Visible exercises by category, plus the goal's own exercise if it has been hidden since.
   const groups = useMemo(() => {
@@ -58,7 +74,7 @@ export function GoalEditor({ open, goal, data, onBack, onClose, onSave, onDelete
   const changeMetric = (next: GoalMetric) => {
     if (next === metric) return;
     setMetric(next);
-    setTarget(goal?.metric === next ? goal.target : GOAL_LIMITS[next].initial);
+    setTarget(targetFor(period, next));
   };
 
   const changeScope = (next: Scope) => {
@@ -69,13 +85,13 @@ export function GoalEditor({ open, goal, data, onBack, onClose, onSave, onDelete
   };
 
   const save = () => {
-    const next: DailyGoal = { id: goal?.id ?? newId(), metric, target: clampTarget(metric, target) };
+    const next: Goal = { id: goal?.id ?? newId(), metric, period, target: clampTarget(period, metric, target) };
     if (scope.startsWith('ex:')) next.exerciseId = scope.slice(3);
     else if (scope.startsWith('cat:')) next.category = scope.slice(4);
     onSave(next);
   };
 
-  const limits = GOAL_LIMITS[metric];
+  const limits = GOAL_LIMITS[period][metric];
 
   return (
     <Sheet
@@ -101,6 +117,9 @@ export function GoalEditor({ open, goal, data, onBack, onClose, onSave, onDelete
       }
     >
       <div className="form">
+        <Field label={texts.goals.period}>
+          <Segmented value={period} options={PERIODS} onChange={changePeriod} label={texts.goals.period} />
+        </Field>
         <Field label={texts.goals.metric} hint={texts.goals.metricHints[metric]}>
           <Segmented value={metric} options={METRICS} onChange={changeMetric} label={texts.goals.metric} />
         </Field>
@@ -125,10 +144,10 @@ export function GoalEditor({ open, goal, data, onBack, onClose, onSave, onDelete
             ))}
           </select>
         </Field>
-        <Field label={texts.goals.target}>
+        <Field label={texts.goals.target[period]}>
           <Stepper
-            label={texts.goals.target}
-            value={clampTarget(metric, target)}
+            label={texts.goals.target[period]}
+            value={clampTarget(period, metric, target)}
             min={limits.min}
             max={limits.max}
             step={limits.step}

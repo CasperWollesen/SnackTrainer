@@ -2,22 +2,23 @@ import { describe, expect, it } from 'vitest';
 import { upgradeAppData, validateAppData } from './backup';
 import { clampTarget, daysAllGoalsMet, goalProgress, goalStreak, newlyReachedGoals, withGoal, withoutGoal } from './goals';
 import { addEntry, type Amount } from './sessions';
-import { DATA_VERSION, emptyData, type AppData, type DailyGoal } from './types';
+import { DATA_VERSION, emptyData, type AppData, type Goal } from './types';
 
 function log(d: AppData, exerciseId: string, at: string, amount: Amount): AppData {
   return addEntry(d, { exerciseId, at, amount }).data;
 }
 
-function withGoals(d: AppData, goals: DailyGoal[]): AppData {
-  return { ...d, settings: { ...d.settings, dailyGoals: goals } };
+function withGoals(d: AppData, goals: Goal[]): AppData {
+  return { ...d, settings: { ...d.settings, goals: goals } };
 }
 
-const ALL_REPS: DailyGoal = { id: 'all', metric: 'reps', target: 50 };
-const PUSH_UPS: DailyGoal = { id: 'push', metric: 'reps', target: 30, exerciseId: 'push-up' };
-const STRETCH: DailyGoal = { id: 'stretch', metric: 'time', target: 120, category: 'Stretching' };
-const SNACKS: DailyGoal = { id: 'snacks', metric: 'sessions', target: 2 };
+const ALL_REPS: Goal = { id: 'all', metric: 'reps', period: 'day', target: 50 };
+const PUSH_UPS: Goal = { id: 'push', metric: 'reps', period: 'day', target: 30, exerciseId: 'push-up' };
+const STRETCH: Goal = { id: 'stretch', metric: 'time', period: 'day', target: 120, category: 'Stretching' };
+const SNACKS: Goal = { id: 'snacks', metric: 'sessions', period: 'day', target: 2 };
+const WEEK_REPS: Goal = { id: 'week', metric: 'reps', period: 'week', target: 100 };
 
-describe('daily goals', () => {
+describe('goals', () => {
   it('counts reps, time and sessions for everything, one exercise or one category', () => {
     let d = withGoals(emptyData(), [ALL_REPS, PUSH_UPS, STRETCH, SNACKS]);
     d = log(d, 'push-up', '2026-10-15T07:30', { reps: 20 });
@@ -66,22 +67,59 @@ describe('daily goals', () => {
     expect(daysAllGoalsMet(withGoals(d, []), '2026-10-01', '2026-10-31').size).toBe(0);
   });
 
+  it('counts a week goal from Monday up to the day shown, with the pace of the week', () => {
+    let d = withGoals(emptyData(), [WEEK_REPS, PUSH_UPS]);
+    d = log(d, 'squat', '2026-10-11T08:00', { reps: 99 }); // Sunday of the week before
+    d = log(d, 'squat', '2026-10-12T08:00', { reps: 40 }); // Monday
+    d = log(d, 'push-up', '2026-10-14T08:00', { reps: 30 }); // Wednesday
+    d = log(d, 'squat', '2026-10-16T08:00', { reps: 50 }); // Friday
+    const wed = goalProgress(d, '2026-10-14').find((p) => p.goal.id === 'week')!;
+    expect(wed).toMatchObject({ value: 70, done: false });
+    expect(wed.pace).toBeCloseTo(3 / 7);
+    expect(goalProgress(d, '2026-10-14').find((p) => p.goal.id === 'push')!.pace).toBeUndefined();
+    expect(goalProgress(d, '2026-10-16').find((p) => p.goal.id === 'week')).toMatchObject({ value: 120, done: true });
+    // Week goals do not decide single days in History.
+    expect([...daysAllGoalsMet(d, '2026-10-12', '2026-10-18')]).toEqual(['2026-10-14']);
+  });
+
+  it('reports a week goal reached by a log, and counts weeks in a row', () => {
+    let d = withGoals(emptyData(), [WEEK_REPS]);
+    d = log(d, 'squat', '2026-09-30T08:00', { reps: 100 }); // week 40
+    d = log(d, 'squat', '2026-10-06T08:00', { reps: 100 }); // week 41
+    d = log(d, 'squat', '2026-10-12T08:00', { reps: 60 }); // week 42, not done yet
+    expect(goalStreak(d, WEEK_REPS, '2026-10-15')).toBe(2); // the unfinished week does not break it
+    const after = log(d, 'squat', '2026-10-15T08:00', { reps: 40 });
+    expect(newlyReachedGoals(d, after, '2026-10-15').map((g) => g.id)).toEqual(['week']);
+    expect(goalStreak(after, WEEK_REPS, '2026-10-15')).toBe(3);
+    expect(goalStreak(after, WEEK_REPS, '2026-10-27')).toBe(0); // a whole week was missed
+  });
+
   it('edits the goal list and clamps targets', () => {
     expect(withGoal([ALL_REPS], PUSH_UPS)).toEqual([ALL_REPS, PUSH_UPS]);
     expect(withGoal([ALL_REPS, PUSH_UPS], { ...ALL_REPS, target: 80 })).toEqual([{ ...ALL_REPS, target: 80 }, PUSH_UPS]);
     expect(withoutGoal([ALL_REPS, PUSH_UPS], 'all')).toEqual([PUSH_UPS]);
-    expect(clampTarget('reps', 0)).toBe(5);
-    expect(clampTarget('reps', 47)).toBe(45);
-    expect(clampTarget('time', 100)).toBe(90);
-    expect(clampTarget('sessions', 99)).toBe(30);
+    expect(clampTarget('day', 'reps', 0)).toBe(5);
+    expect(clampTarget('day', 'reps', 47)).toBe(45);
+    expect(clampTarget('day', 'time', 100)).toBe(90);
+    expect(clampTarget('day', 'sessions', 99)).toBe(30);
+    expect(clampTarget('week', 'reps', 47)).toBe(50);
+    expect(clampTarget('week', 'time', 100)).toBe(300);
+  });
+
+  it('upgrades version 5 daily goals to version 6 goals per day', () => {
+    const v5 = { version: 5, sessions: [], settings: { dailyGoals: [{ id: 'a', metric: 'reps', target: 50 }] } };
+    const data = validateAppData(upgradeAppData(v5));
+    expect(data?.version).toBe(DATA_VERSION);
+    expect(data?.settings.goals).toEqual([{ id: 'a', metric: 'reps', period: 'day', target: 50 }]);
+    expect(data?.settings).not.toHaveProperty('dailyGoals');
   });
 
   it('upgrades version 4 data and drops unreadable goals', () => {
     const data = validateAppData(upgradeAppData({ version: 4, sessions: [], settings: { timerMode: 'down' } }));
     expect(data?.version).toBe(DATA_VERSION);
-    expect(data?.settings.dailyGoals).toEqual([]);
+    expect(data?.settings.goals).toEqual([]);
     expect(data?.settings.timerMode).toBe('down');
     const goals = [PUSH_UPS, { id: 'x', metric: 'weight', target: 5 }, { id: 'y', metric: 'reps', target: 0 }, { ...PUSH_UPS }, STRETCH];
-    expect(validateAppData({ version: DATA_VERSION, sessions: [], settings: { dailyGoals: goals } })?.settings.dailyGoals).toEqual([PUSH_UPS, STRETCH]);
+    expect(validateAppData({ version: DATA_VERSION, sessions: [], settings: { goals: goals } })?.settings.goals).toEqual([PUSH_UPS, STRETCH]);
   });
 });

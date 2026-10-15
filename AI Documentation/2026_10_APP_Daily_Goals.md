@@ -1,14 +1,14 @@
-# Daily Goals
+# Goals (per day and per week)
 
 Documentation ID: `APP-DAILY-GOALS`
-File revision: `2026_10_r2`
+File revision: `2026_10_r3`
 Last reviewed: `2026-10-15`
 
 Related code:
-- `App/src/domain/goals.ts` — `goalValueOf`, `goalProgress`, `daysAllGoalsMet`, `newlyReachedGoals`, `goalStreak`, `GOAL_LIMITS`, `clampTarget`, `withGoal`, `withoutGoal`
+- `App/src/domain/goals.ts` — `goalValueOf`, `goalRange`, `goalProgress`, `daysAllGoalsMet`, `newlyReachedGoals`, `goalStreak`, `GOAL_LIMITS`, `clampTarget`, `withGoal`, `withoutGoal`
 - `App/src/domain/goals.test.ts`
-- `App/src/domain/types.ts` — `DailyGoal`, `GoalMetric`, `Settings.dailyGoals`, `DATA_VERSION = 5`
-- `App/src/domain/backup.ts` — 4 → 5 step, `validateGoal`
+- `App/src/domain/types.ts` — `Goal`, `GoalMetric`, `GoalPeriod`, `Settings.goals`, `DATA_VERSION = 6`
+- `App/src/domain/backup.ts` — 4 → 5 and 5 → 6 steps, `validateGoal`
 - `App/src/ui/components/GoalList.tsx` — rows with progress bar and streak; `goalScope` (name + emoji)
 - `App/src/ui/views/GoalsSheet.tsx`, `App/src/ui/views/GoalEditor.tsx` — list and editor (Menu → Daily goals)
 - `App/src/ui/views/TodayView.tsx` — `GoalsSection`
@@ -28,6 +28,25 @@ Today shows a "Goals" section for the day shown: each goal with "35 / 50 reps", 
 green when met, and the streak (🔥 N days, from 2) when looking at today. With no goals, Today
 shows a small "Set a daily goal" link. Logging an entry that completes a goal adds
 "🎯 Goal reached: …" to the Logged toast.
+
+### Week goals (added 2026-10-15, data version 6)
+
+A goal has a `period`: `day` or `week` (ISO week, Monday–Sunday). The editor starts with "Per: Day | Week";
+week targets have their own limits (reps 10–10000 step 10, time 5 min–40 h step 5 min, snacks 1–150).
+
+- Today and the Goals sheet show a week goal as "285 / 500 reps this week" with a "Week" tag. The value
+  counts Monday up to and including the day shown.
+- The bar has a thin mark where an even pace would be by the end of that day (Monday 1/7 … Sunday 7/7),
+  hidden once the goal is met.
+- The streak counts weeks ("🔥 3 weeks"); an unfinished current week does not break it.
+- "Goal reached" names it "(this week)".
+- History's green day dots and "All daily goals met on N of M days" use only daily goals. With the Week
+  period selected, a second line says "All week goals met" or "Week goals: N of M met".
+- v5 → v6: `settings.dailyGoals` becomes `settings.goals`, every existing goal with `period: 'day'`.
+
+Verified 2026-10-15 in the dev server with stored v5 data: the existing goal came through as a daily goal,
+a new week goal (500 reps) saved as version 6 without `dailyGoals`, Today showed "285 / 500 reps this week"
+with the pace mark at 57 % on a Thursday, and History → Week showed "Week goals: 0 of 1 met".
 
 ### In History
 
@@ -66,7 +85,6 @@ unit tests), and the native select's look on iOS.
 
 ## Open Items / Ideas
 
-- Weekly goals (e.g. 500 push-ups a week) would reuse the same value function over a week's sessions.
 - A bodyweight-only scope (the catalogue's `bodyweight` flag) if categories are not enough.
 
 ## Maintenance Notes

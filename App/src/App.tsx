@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { hasDemoData } from './domain/demo';
 import { findEntry } from './domain/sessions';
 import { findExercise, isBuiltIn, unknownExercise } from './domain/exercises';
-import type { DailyGoal, Entry, Exercise, ISODate } from './domain/types';
+import type { Goal, Entry, Exercise, ISODate } from './domain/types';
 import { repository } from './storage/repository';
 import { texts } from './texts';
 import { Button, IconButton } from './ui/components/Button';
@@ -46,7 +46,7 @@ type Overlay =
   | { kind: 'share' }
   | { kind: 'goals' }
   | { kind: 'start' }
-  | { kind: 'goal'; goal: DailyGoal | null }
+  | { kind: 'goal'; goal: Goal | null }
   | { kind: 'menu' };
 
 export function App() {

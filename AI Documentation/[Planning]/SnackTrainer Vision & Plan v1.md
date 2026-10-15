@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_10_r16`
+File revision: `2026_10_r17`
 Last reviewed: `2026-10-15`
 
 Related repositories (inspiration, not dependencies):
@@ -34,7 +34,7 @@ counting, weights, social features, streak gamification.
 
 | Tab | What it shows |
 |---|---|
-| **Today** | The selected day (default today) with ← / → to step back and forth. Stat tiles (reps, time, sessions), the day's **daily goals** with progress and streak, and the list of sessions, each with its clock time and the entries logged in it ("07:30 · 20 Push-Up"). Tap an entry to edit or delete it. |
+| **Today** | The selected day (default today) with ← / → to step back and forth. Stat tiles (reps, time, sessions), the day's **goals** (per day and per week) with progress and streak, and the list of sessions, each with its clock time and the entries logged in it ("07:30 · 20 Push-Up"). Tap an entry to edit or delete it. |
 | **History** | Period: **Day** (default), **Week** (ISO, Mon–Sun), **Month**, rolling **7 days** / **31 days**, with ← / → back in time and "Now". Exercise filter and Reps / Time / Sessions metric. Stat tiles with change against the previous period (running week/month compared "so far"), a breakdown chart (by hour for a day, by day otherwise; tapping a day opens it as a Day), a trend over the last 12–14 periods (tap to jump), the active days (open on Today) and a per-exercise breakdown with change (opens the exercise page). A **Nerd view** toggle adds averages, records, time-of-day and weekday charts, streaks and all-time totals. |
 | **Exercises** | Search box, "Recent" first (every exercise used so far, one per row, most recently used at the top), then all visible exercises grouped by category. Tapping an exercise opens its **exercise page**. Custom exercises can be added. "Hide N unused" hides every never-logged built-in at once; a "Hidden" section lists hidden exercises with "Show all". |
 
@@ -43,7 +43,7 @@ counting, weights, social features, streak gamification.
 **Hidden exercises** are left out of the pickers and Recent; a search still finds them under a "Hidden" group. Their entries count everywhere as before.
 
 Phones have a bottom bar with **Today · History · Menu**. Menu opens a sheet listing the other
-destinations (Exercises, Daily goals, Settings, Share, Splash screen); new ones are added to `menuItems` in `App.tsx`
+destinations (Exercises, Goals, Settings, Share, Splash screen); new ones are added to `menuItems` in `App.tsx`
 without touching the bar. The sheet draws them bottom-up, so the first (Exercises) sits nearest the thumb.
 Desktop has a sidebar with every destination. A floating **Log** button is always present on
 phones (sidebar button on desktop).
@@ -161,6 +161,7 @@ launch each day; replay from the menu.
 17. **Daily goals are one shape** (`DailyGoal`: metric reps / time / sessions, a target per day, scope all /
     category / exercise) in `settings.dailyGoals`, so they travel with backups. Time is timed entries,
     like the Time tile. A streak ignores an unfinished today. See `2026_10_APP_Daily_Goals.md`. Data version 5.
+    Version 6 adds `period: 'day' | 'week'` (ISO week, Monday–Sunday) and renames the list to `settings.goals`.
 18. **The screen stays on while a session timer runs** (Screen Wake Lock API, `ui/hooks/useWakeLock.ts`,
     same pattern as CW.ShowerTimer), so a phone on the floor does not lock and freeze a count-down. Local
     only. Notifications for a closed or locked app would need Web Push through a server, which stays a non-goal.
@@ -205,7 +206,7 @@ interface ActiveSession {    // v3: the running timer
 }
 
 interface AppData {
-  version: 5;              // ...; 3 -> 4 count-down; 4 -> 5 daily goals
+  version: 6;              // ...; 3 -> 4 count-down; 4 -> 5 daily goals; 5 -> 6 goals per day/week
   sessions: Session[];        // sorted by startedAt
   customExercises: Exercise[];
   settings: {
@@ -215,7 +216,7 @@ interface AppData {
     sessionTimeoutMinutes: number; // added in version 3, default 5
     timerMode: 'up' | 'down';      // added in version 4, default 'up'
     countdownMinutes: number;      // added in version 4, default 5
-    dailyGoals: DailyGoal[];       // added in version 5: { id, metric: 'reps'|'time'|'sessions', target, exerciseId?, category? }
+    goals: Goal[];                 // v5 as dailyGoals, v6: { id, metric: 'reps'|'time'|'sessions', period: 'day'|'week', target, exerciseId?, category? }
   };
   activeSession: ActiveSession | null;
 }
@@ -299,6 +300,7 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 - [x] History: mark days where all goals were met (chart dot, day-row tag, "N of M days")
 - [x] Keep the screen on while a session timer runs (wake lock)
 - [x] Start sheet (choose Count up / Count-down) and Discard a running session (with Undo)
+- [x] Weekly goals (ISO week): "this week" progress with an even-pace mark, week streaks, History week line
 
 ### Ideas parked (not planned)
 

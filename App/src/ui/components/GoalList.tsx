@@ -1,20 +1,20 @@
 import { Check, ChevronRight } from 'lucide-react';
 import { allExercises, findExercise } from '../../domain/exercises';
 import type { GoalProgress } from '../../domain/goals';
-import type { AppData, DailyGoal } from '../../domain/types';
+import type { AppData, Goal } from '../../domain/types';
 import { texts } from '../../texts';
 import { formatGoalProgress } from '../format';
 
 export interface GoalListProps {
   progress: GoalProgress[];
   data: AppData;
-  /** Days in a row per goal id; shown from 2 days. */
+  /** Days (or weeks, for week goals) in a row per goal id; shown from 2. */
   streaks?: ReadonlyMap<string, number>;
-  onSelect: (goal: DailyGoal) => void;
+  onSelect: (goal: Goal) => void;
 }
 
 /** What a goal counts, as a name and an emoji: "All exercises", "Stretching", "Push-Up". */
-export function goalScope(goal: DailyGoal, data: AppData): { name: string; emoji: string } {
+export function goalScope(goal: Goal, data: AppData): { name: string; emoji: string } {
   if (goal.exerciseId !== undefined) {
     const exercise = findExercise(data, goal.exerciseId);
     return { name: exercise?.name ?? goal.exerciseId, emoji: exercise?.emoji || '🏃' };
@@ -30,7 +30,7 @@ export function goalScope(goal: DailyGoal, data: AppData): { name: string; emoji
 export function GoalList({ progress, data, streaks, onSelect }: GoalListProps) {
   return (
     <div className="list">
-      {progress.map(({ goal, value, fraction, done }) => {
+      {progress.map(({ goal, value, fraction, done, pace }) => {
         const scope = goalScope(goal, data);
         const streak = streaks?.get(goal.id) ?? 0;
         return (
@@ -40,15 +40,19 @@ export function GoalList({ progress, data, streaks, onSelect }: GoalListProps) {
             </span>
             <span className="goal__body">
               <span className="goal__head">
-                <span className="goal__name">{scope.name}</span>
-                {streak >= 2 ? <span className="goal__streak">{texts.goals.streak(streak)}</span> : null}
+                <span className="goal__name">
+                  {scope.name}
+                  {goal.period === 'week' ? <span className="tag tag--time goal__period">{texts.goals.weekTag}</span> : null}
+                </span>
+                {streak >= 2 ? <span className="goal__streak">{texts.goals.streak(streak, goal.period)}</span> : null}
               </span>
               <span className="goal__amount">
                 {done ? <Check size={14} aria-label={texts.goals.done} /> : null}
-                {formatGoalProgress(goal.metric, value, goal.target)}
+                {formatGoalProgress(goal.metric, value, goal.target, goal.period)}
               </span>
               <span className="goal__bar" aria-hidden="true">
                 <span style={{ width: `${Math.round(fraction * 100)}%` }} />
+                {pace !== undefined && !done && pace < 1 ? <i className="goal__pace" style={{ left: `${Math.round(pace * 100)}%` }} /> : null}
               </span>
             </span>
             <ChevronRight size={18} aria-hidden="true" />

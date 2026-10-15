@@ -1,7 +1,7 @@
 import { addDays, daysBetween, isoWeekNumber, parseISODate, weekdayOf } from '../domain/dates';
 import type { Period } from '../domain/periods';
 import { metricValue, type Delta, type Metric } from '../domain/stats';
-import type { Entry, Exercise, GoalMetric, ISODate } from '../domain/types';
+import type { Entry, Exercise, GoalMetric, GoalPeriod, ISODate } from '../domain/types';
 import { MONTH_NAMES, MONTH_SHORT, WEEKDAY_NAMES, WEEKDAY_SHORT, texts } from '../texts';
 
 export function weekdayName(iso: ISODate): string {
@@ -122,11 +122,15 @@ export function formatGoalAmount(metric: GoalMetric, value: number): string {
   return `${value} ${texts.goals.repsUnit}`;
 }
 
-/** Progress text: "35 / 50 reps", "1:30 / 2:00", "2 / 5 snacks". */
-export function formatGoalProgress(metric: GoalMetric, value: number, target: number): string {
-  if (metric === 'time') return texts.goals.of(formatDuration(value), formatDuration(target));
-  if (metric === 'sessions') return texts.goals.of(String(value), texts.goals.snacks(target));
-  return texts.goals.of(String(value), `${target} ${texts.goals.repsUnit}`);
+/** Progress text: "35 / 50 reps", "1:30 / 2:00", "2 / 5 snacks"; week goals add "this week". */
+export function formatGoalProgress(metric: GoalMetric, value: number, target: number, period: GoalPeriod = 'day'): string {
+  const text =
+    metric === 'time'
+      ? texts.goals.of(formatDuration(value), formatDuration(target))
+      : metric === 'sessions'
+        ? texts.goals.of(String(value), texts.goals.snacks(target))
+        : texts.goals.of(String(value), `${target} ${texts.goals.repsUnit}`);
+  return period === 'week' ? `${text} ${texts.goals.thisWeek}` : text;
 }
 
 /** "1:30" for 90 seconds, "0:45" for 45, "1:02:03" past an hour. */

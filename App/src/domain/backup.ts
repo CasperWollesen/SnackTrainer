@@ -1,5 +1,5 @@
 import { compareISO, isISODate, isLocalDateTime } from './dates';
-import { DATA_VERSION, DEFAULT_SETTINGS, type ActiveSession, type AppData, type DailyGoal, type Entry, type Exercise, type Session, type Settings } from './types';
+import { DATA_VERSION, DEFAULT_SETTINGS, type ActiveSession, type AppData, type Goal, type Entry, type Exercise, type Session, type Settings } from './types';
 
 export const BACKUP_APP_ID = 'snacktrainer';
 export const BACKUP_FORMAT_VERSION = 1;
@@ -128,7 +128,7 @@ function validateExercise(raw: unknown): Exercise | null {
 }
 
 function validateSettings(raw: unknown): Settings {
-  const s: Settings = { ...DEFAULT_SETTINGS, hiddenExerciseIds: [], dailyGoals: [] };
+  const s: Settings = { ...DEFAULT_SETTINGS, hiddenExerciseIds: [], goals: [] };
   if (!isRecord(raw)) return s;
   if (typeof raw.sessionGapMinutes === 'number' && raw.sessionGapMinutes >= 0 && raw.sessionGapMinutes <= 24 * 60) {
     s.sessionGapMinutes = Math.round(raw.sessionGapMinutes);
@@ -144,13 +144,13 @@ function validateSettings(raw: unknown): Settings {
   if (typeof raw.countdownMinutes === 'number' && raw.countdownMinutes >= 1 && raw.countdownMinutes <= 120) {
     s.countdownMinutes = Math.round(raw.countdownMinutes);
   }
-  if (Array.isArray(raw.dailyGoals)) {
+  if (Array.isArray(raw.goals)) {
     const ids = new Set<string>();
-    for (const g of raw.dailyGoals) {
+    for (const g of raw.goals) {
       const goal = validateGoal(g);
       if (goal && !ids.has(goal.id)) {
         ids.add(goal.id);
-        s.dailyGoals.push(goal);
+        s.goals.push(goal);
       }
     }
   }
@@ -158,11 +158,11 @@ function validateSettings(raw: unknown): Settings {
 }
 
 /** A goal that cannot be read is dropped, never a reason to reject the data. */
-function validateGoal(raw: unknown): DailyGoal | null {
+function validateGoal(raw: unknown): Goal | null {
   if (!isRecord(raw) || !isNonEmptyString(raw.id)) return null;
   if (raw.metric !== 'reps' && raw.metric !== 'time' && raw.metric !== 'sessions') return null;
   if (!isNonNegativeInt(raw.target) || raw.target === 0) return null;
-  const goal: DailyGoal = { id: raw.id, metric: raw.metric, target: raw.target };
+  const goal: Goal = { id: raw.id, metric: raw.metric, period: raw.period === 'week' ? 'week' : 'day', target: raw.target };
   if (isNonEmptyString(raw.exerciseId)) goal.exerciseId = raw.exerciseId;
   else if (isNonEmptyString(raw.category)) goal.category = raw.category;
   return goal;
@@ -207,6 +207,12 @@ export function upgradeAppData(raw: unknown): unknown {
   if (data.version === 4) {
     // 4 -> 5: no daily goals yet (validateSettings defaults the list).
     data = { ...data, version: 5 };
+  }
+  if (data.version === 5) {
+    // 5 -> 6: settings.dailyGoals becomes settings.goals; every existing goal is a daily one.
+    const { dailyGoals, ...settings } = isRecord(data.settings) ? data.settings : {};
+    const goals = Array.isArray(dailyGoals) ? dailyGoals.map((g: unknown) => (isRecord(g) ? { ...g, period: 'day' } : g)) : [];
+    data = { ...data, version: 6, settings: { ...settings, goals } };
   }
   return data;
 }

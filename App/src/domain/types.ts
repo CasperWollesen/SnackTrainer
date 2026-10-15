@@ -68,13 +68,18 @@ export interface ActiveSession {
 
 export type GoalMetric = 'reps' | 'time' | 'sessions';
 
+/** v6: a goal is per calendar day or per ISO week (Monday–Sunday). */
+export type GoalPeriod = 'day' | 'week';
+
 /**
- * v5: a daily goal. `target` is reps, seconds or sessions per day. With `exerciseId` only that
- * exercise counts, with `category` only exercises in that category; neither means everything.
+ * A goal (v5 as `dailyGoals`, v6 `goals` with `period`). `target` is reps, seconds or sessions per
+ * day or per week. With `exerciseId` only that exercise counts, with `category` only exercises in
+ * that category; neither means everything.
  */
-export interface DailyGoal {
+export interface Goal {
   id: string;
   metric: GoalMetric;
+  period: GoalPeriod;
   target: number;
   exerciseId?: string;
   category?: string;
@@ -92,17 +97,17 @@ export interface Settings {
   timerMode: TimerMode;
   /** v4: length of a count-down, in minutes. */
   countdownMinutes: number;
-  /** v5: daily goals, shown on Today in this order. */
-  dailyGoals: DailyGoal[];
+  /** v6 (v5: dailyGoals): goals per day or week, shown on Today in this order. */
+  goals: Goal[];
 }
 
 /**
  * 2: settings.hiddenExerciseIds. 3: activeSession, Session.durationSeconds,
  * settings.sessionTimeoutMinutes. 4: count-down (activeSession.countdownSeconds,
- * settings.timerMode, settings.countdownMinutes). 5: settings.dailyGoals.
- * Older data is upgraded by `upgradeAppData`.
+ * settings.timerMode, settings.countdownMinutes). 5: settings.dailyGoals. 6: settings.goals
+ * with a day/week period (replaces dailyGoals). Older data is upgraded by `upgradeAppData`.
  */
-export const DATA_VERSION = 5;
+export const DATA_VERSION = 6;
 
 export interface AppData {
   version: typeof DATA_VERSION;
@@ -121,7 +126,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sessionTimeoutMinutes: 5,
   timerMode: 'up',
   countdownMinutes: 5,
-  dailyGoals: [],
+  goals: [],
 };
 
 export function emptyData(): AppData {
@@ -129,7 +134,7 @@ export function emptyData(): AppData {
     version: DATA_VERSION,
     sessions: [],
     customExercises: [],
-    settings: { ...DEFAULT_SETTINGS, hiddenExerciseIds: [], dailyGoals: [] },
+    settings: { ...DEFAULT_SETTINGS, hiddenExerciseIds: [], goals: [] },
     activeSession: null,
   };
 }

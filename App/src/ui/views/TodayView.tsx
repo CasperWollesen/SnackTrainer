@@ -88,7 +88,7 @@ export function TodayView({ data, date, today, onChangeDate, onOpenEntry, onStar
 function GoalsSection({ data, date, today, onOpen }: { data: AppData; date: ISODate; today: ISODate; onOpen: () => void }) {
   const progress = useMemo(() => goalProgress(data, date), [data, date]);
   const streaks = useMemo(
-    () => (date === today ? new Map(data.settings.dailyGoals.map((g) => [g.id, goalStreak(data, g, today)])) : undefined),
+    () => (date === today ? new Map(data.settings.goals.map((g) => [g.id, goalStreak(data, g, today)])) : undefined),
     [data, date, today],
   );
   if (progress.length === 0) {

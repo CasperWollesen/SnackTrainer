@@ -1,13 +1,22 @@
 import { useCallback, useMemo } from 'react';
 import { removeDemoData, withDemoData } from '../domain/demo';
-import { autoStopIfIdle, resumeSession, startSession, stopSession, touchSession, type StopResult } from '../domain/timer';
+import { autoStopIfIdle, countdownEndMs, finishCountdownIfDue, resumeSession, startSession, stopSession, touchSession, type StopResult } from '../domain/timer';
 import { findExercise, unknownExercise, withHidden } from '../domain/exercises';
 import { addEntry, deleteEntry, findEntry, restoreEntry, updateEntry, type Amount, type NewEntry } from '../domain/sessions';
-import type { Exercise, LocalDateTime } from '../domain/types';
+import type { Exercise, LocalDateTime, Session } from '../domain/types';
 import { repository } from '../storage/repository';
 import { texts } from '../texts';
 import { formatDuration, formatEntrySummary } from './format';
+import { unlockSound } from './sound';
 import { useToast } from './hooks/useToast';
+
+/** A count-down that ended by itself; App shows its summary. */
+export interface CountdownFinished {
+  session: Session | null;
+  lengthSeconds: number;
+  /** The time ran out a while ago (the app was closed), so no sound. */
+  late: boolean;
+}
 
 /** User actions with toast feedback and Undo. Every write goes through the repository. */
 export function useActions() {
@@ -104,9 +113,13 @@ export function useActions() {
     [afterWrite],
   );
 
+  /** Starts the timer in the mode chosen on Today (settings.timerMode / countdownMinutes). */
   const startTimer = useCallback(() => {
-    repository.update((d) => startSession(d, new Date()));
-    afterWrite(texts.toast.sessionStarted);
+    const { timerMode, countdownMinutes } = repository.get().settings;
+    const countdown = timerMode === 'down';
+    if (countdown) unlockSound(); // the start tap is the user gesture browsers require for the end beep
+    repository.update((d) => startSession(d, new Date(), countdown ? countdownMinutes * 60 : undefined));
+    afterWrite(countdown ? texts.toast.countdownStarted(countdownMinutes) : texts.toast.sessionStarted);
   }, [afterWrite]);
 
   /** Shared by Stop and auto-stop: saves, then offers Undo (the timer runs on). */
@@ -129,14 +142,24 @@ export function useActions() {
     afterStop(stopSession(repository.get(), Date.now()), texts.toast.sessionStopped);
   }, [afterStop]);
 
-  /** Runs the idle check; returns true when the timer was stopped. */
-  const autoStopTimer = useCallback((): boolean => {
+  /**
+   * Ends a count-down whose time is up (returned, without a toast: App shows a summary) or a
+   * count-up timer that has been idle too long (toast with Undo).
+   */
+  const autoStopTimer = useCallback((): CountdownFinished | null => {
     const d = repository.get();
-    const result = autoStopIfIdle(d, Date.now());
-    if (!result) return false;
-    afterStop(result, (duration) => texts.toast.sessionAutoStopped(duration, d.settings.sessionTimeoutMinutes));
-    return true;
-  }, [afterStop]);
+    const nowMs = Date.now();
+    const finished = finishCountdownIfDue(d, nowMs);
+    if (finished && d.activeSession) {
+      const end = countdownEndMs(d.activeSession) ?? nowMs;
+      repository.replaceAll(finished.data);
+      if (repository.lastSaveFailed) toast.show({ message: texts.toast.saveFailed, variant: 'error' });
+      return { session: finished.session, lengthSeconds: d.activeSession.countdownSeconds ?? 0, late: nowMs - end > 5_000 };
+    }
+    const result = autoStopIfIdle(d, nowMs);
+    if (result) afterStop(result, (duration) => texts.toast.sessionAutoStopped(duration, d.settings.sessionTimeoutMinutes));
+    return null;
+  }, [afterStop, toast]);
 
   /** Counts as activity for the running timer; writes at most every 15 seconds. */
   const touchTimer = useCallback((force = false) => {

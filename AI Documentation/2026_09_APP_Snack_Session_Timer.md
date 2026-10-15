@@ -1,11 +1,12 @@
 # Snack Session Timer and Stretching (Milestone 4)
 
 Documentation ID: `APP-SNACK-SESSION-TIMER`
-File revision: `2026_09_r1`
-Last reviewed: `2026-09-23`
+File revision: `2026_10_r2`
+Last reviewed: `2026-10-15`
 
 Related code:
-- `App/src/domain/timer.ts` — `startSession`, `touchSession`, `stopSession`, `autoStopIfIdle`, `resumeSession`, `idleDeadline`, `elapsedSeconds`
+- `App/src/domain/timer.ts` — `startSession`, `touchSession`, `stopSession`, `autoStopIfIdle`, `resumeSession`, `idleDeadline`, `elapsedSeconds`; count-down: `countdownEndMs`, `remainingSeconds`, `finishCountdownIfDue`
+- `App/src/ui/views/CountdownDoneSheet.tsx`, `App/src/ui/sound.ts` — the count-down summary and end beep
 - `App/src/domain/types.ts` — `ActiveSession`, `Session.durationSeconds`, `Settings.sessionTimeoutMinutes`, `DATA_VERSION = 3`
 - `App/src/domain/sessions.ts` — `addEntry` routes entries into the running timer; `startOf` keeps a timed session's start
 - `App/src/domain/backup.ts` — v2 → v3 step in `upgradeAppData`, validation of the new fields
@@ -91,10 +92,29 @@ Not verified: a real phone, and in particular whether iOS/Android keep the page 
 in the background. The timer is derived from timestamps, so it stays correct after a freeze, and the
 idle check runs on focus.
 
+## Count-down (added 2026-10-15, data version 4)
+
+Today's Start area has "Count up | Count-down" (`settings.timerMode`) and, for a count-down, a minutes
+stepper (`settings.countdownMinutes`, 1–60). Start then sets `activeSession.countdownSeconds`.
+
+- The bar shows the time left, a progress bar and "Ends at HH:MM"; the last 10 seconds use the warning colour.
+- `autoStopIfIdle` ignores a count-down; `finishCountdownIfDue` stops it at its end time, so the duration
+  is exactly the chosen length even when the app was closed past the end.
+- `actions.autoStopTimer()` returns the finished count-down (no toast); App shows `CountdownDoneSheet`
+  (per-exercise totals, total, Log / Done) once no other sheet is open, and plays `playTimeUp()` unless
+  the end was more than 5 s ago.
+- Stop early is the normal Stop with Undo; Undo resumes the count-down with its original end.
+
+Verified in the dev server on 2026-10-15 (375×812): the mode and minutes persist, the bar counts down,
+a logged entry shows in the bar, the count-down ended by itself, the summary listed the entry and the
+session was saved with `durationSeconds: 300`. Not verified: the beep and vibration (the preview pane
+has no audio output to check), and behaviour on a locked iPhone, where the page is frozen; the end is
+then only noticed when the app is opened again (no sound in that case).
+
 ## Open Items / Deliberately Not Done
 
 - No pause button inside a session (the owner chose: a session *is* the break).
-- No notification or sound at auto-stop (notifications are a non-goal).
+- No notification or sound at idle auto-stop (notifications are a non-goal). A count-down beeps only while the app is open.
 - History does not yet show session duration as its own metric. It appears in the Nerd view and on Today.
 
 ## Maintenance Notes

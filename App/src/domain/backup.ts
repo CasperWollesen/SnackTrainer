@@ -140,6 +140,10 @@ function validateSettings(raw: unknown): Settings {
   if (typeof raw.sessionTimeoutMinutes === 'number' && raw.sessionTimeoutMinutes >= 1 && raw.sessionTimeoutMinutes <= 120) {
     s.sessionTimeoutMinutes = Math.round(raw.sessionTimeoutMinutes);
   }
+  if (raw.timerMode === 'up' || raw.timerMode === 'down') s.timerMode = raw.timerMode;
+  if (typeof raw.countdownMinutes === 'number' && raw.countdownMinutes >= 1 && raw.countdownMinutes <= 120) {
+    s.countdownMinutes = Math.round(raw.countdownMinutes);
+  }
   return s;
 }
 
@@ -149,7 +153,12 @@ function validateActiveSession(raw: unknown): ActiveSession | null {
   if (!isNonEmptyString(raw.id) || !isLocalDateTime(raw.startedAt)) return null;
   const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
   if (!finite(raw.startedMs) || !finite(raw.lastActivityMs) || raw.lastActivityMs < raw.startedMs) return null;
-  return { id: raw.id, startedAt: raw.startedAt, startedMs: raw.startedMs, lastActivityMs: raw.lastActivityMs };
+  const active: ActiveSession = { id: raw.id, startedAt: raw.startedAt, startedMs: raw.startedMs, lastActivityMs: raw.lastActivityMs };
+  if (raw.countdownSeconds !== undefined) {
+    if (!isNonNegativeInt(raw.countdownSeconds) || raw.countdownSeconds === 0) return null;
+    active.countdownSeconds = raw.countdownSeconds;
+  }
+  return active;
 }
 
 /**
@@ -169,6 +178,10 @@ export function upgradeAppData(raw: unknown): unknown {
     // 2 -> 3: no running timer, default auto-stop; sessions simply have no durationSeconds.
     const settings = isRecord(data.settings) ? data.settings : {};
     data = { ...data, version: 3, activeSession: null, settings: { ...settings, sessionTimeoutMinutes: 5 } };
+  }
+  if (data.version === 3) {
+    // 3 -> 4: count-down; the new settings fall back to their defaults in validateSettings.
+    data = { ...data, version: 4 };
   }
   return data;
 }

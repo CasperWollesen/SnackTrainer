@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBackup, parseBackup, serializeBackup, upgradeAppData, validateAppData } from './backup';
 import { addEntry } from './sessions';
-import { emptyData } from './types';
+import { DATA_VERSION, emptyData } from './types';
 
 describe('backup', () => {
   it('round-trips', () => {
@@ -36,7 +36,7 @@ describe('backup', () => {
   });
 
   it('rejects entries with both reps and seconds, or neither', () => {
-    const base = { version: 3, sessions: [{ id: 's', date: '2026-09-23', startedAt: '2026-09-23T07:30', entries: [] as unknown[] }] };
+    const base = { version: DATA_VERSION, sessions: [{ id: 's', date: '2026-09-23', startedAt: '2026-09-23T07:30', entries: [] as unknown[] }] };
     base.sessions[0]!.entries = [{ id: 'e', exerciseId: 'x', at: '2026-09-23T07:30', reps: 1, seconds: 1 }];
     expect(validateAppData(base)).toBeNull();
     base.sessions[0]!.entries = [{ id: 'e', exerciseId: 'x', at: '2026-09-23T07:30' }];
@@ -47,7 +47,7 @@ describe('backup', () => {
 
   it('fills missing settings with defaults and sorts sessions', () => {
     const raw = {
-      version: 3,
+      version: DATA_VERSION,
       sessions: [
         { id: 'b', date: '2026-09-23', startedAt: '2026-09-23T15:00', entries: [{ id: '2', exerciseId: 'x', at: '2026-09-23T15:00', reps: 1 }] },
         { id: 'a', date: '2026-09-23', startedAt: '2026-09-23T07:00', entries: [{ id: '1', exerciseId: 'x', at: '2026-09-23T07:00', reps: 1 }] },
@@ -55,7 +55,7 @@ describe('backup', () => {
     };
     const data = validateAppData(raw);
     expect(data?.sessions.map((s) => s.id)).toEqual(['a', 'b']);
-    expect(data?.settings).toEqual({ sessionGapMinutes: 20, installHintDismissed: false, hiddenExerciseIds: [], sessionTimeoutMinutes: 5 });
+    expect(data?.settings).toEqual({ sessionGapMinutes: 20, installHintDismissed: false, hiddenExerciseIds: [], sessionTimeoutMinutes: 5, timerMode: 'up', countdownMinutes: 5 });
     expect(data?.customExercises).toEqual([]);
   });
 
@@ -67,18 +67,33 @@ describe('backup', () => {
     };
     expect(validateAppData(v1)).toBeNull(); // not accepted without the upgrade step
     const data = validateAppData(upgradeAppData(v1));
-    expect(data?.version).toBe(3);
+    expect(data?.version).toBe(DATA_VERSION);
     expect(data?.activeSession).toBeNull();
-    expect(data?.settings).toEqual({ sessionGapMinutes: 30, installHintDismissed: true, hiddenExerciseIds: [], sessionTimeoutMinutes: 5 });
+    expect(data?.settings).toEqual({ sessionGapMinutes: 30, installHintDismissed: true, hiddenExerciseIds: [], sessionTimeoutMinutes: 5, timerMode: 'up', countdownMinutes: 5 });
 
     const parsed = parseBackup(JSON.stringify({ app: 'snacktrainer', formatVersion: 1, exportedAt: 'x', data: v1 }));
-    expect(parsed.ok && parsed.data.version).toBe(3);
+    expect(parsed.ok && parsed.data.version).toBe(DATA_VERSION);
     expect(upgradeAppData({ version: 99 })).toEqual({ version: 99 });
   });
 
+  it('upgrades version 3 data to count-down defaults and keeps a running count-down', () => {
+    const active = { id: 't', startedAt: '2026-10-15T10:00', startedMs: 1000, lastActivityMs: 1000 };
+    const v3 = { version: 3, sessions: [], settings: { sessionTimeoutMinutes: 7 }, activeSession: active };
+    const data = validateAppData(upgradeAppData(v3));
+    expect(data?.settings).toMatchObject({ sessionTimeoutMinutes: 7, timerMode: 'up', countdownMinutes: 5 });
+    expect(data?.activeSession).toEqual(active);
+
+    const down = validateAppData({ version: DATA_VERSION, sessions: [], settings: { timerMode: 'down', countdownMinutes: 10 }, activeSession: { ...active, countdownSeconds: 600 } });
+    expect(down?.settings).toMatchObject({ timerMode: 'down', countdownMinutes: 10 });
+    expect(down?.activeSession?.countdownSeconds).toBe(600);
+    const bad = validateAppData({ version: DATA_VERSION, sessions: [], settings: { timerMode: 'sideways' }, activeSession: { ...active, countdownSeconds: 0 } });
+    expect(bad?.settings.timerMode).toBe('up');
+    expect(bad?.activeSession).toBeNull();
+  });
+
   it('cleans hidden exercise ids', () => {
-    const data = validateAppData({ version: 3, sessions: [], settings: { hiddenExerciseIds: ['squat', '', 'squat', 7, 'plank'] } });
+    const data = validateAppData({ version: DATA_VERSION, sessions: [], settings: { hiddenExerciseIds: ['squat', '', 'squat', 7, 'plank'] } });
     expect(data?.settings.hiddenExerciseIds).toEqual(['squat', 'plank']);
-    expect(validateAppData({ version: 3, sessions: [], settings: { hiddenExerciseIds: 'squat' } })?.settings.hiddenExerciseIds).toEqual([]);
+    expect(validateAppData({ version: DATA_VERSION, sessions: [], settings: { hiddenExerciseIds: 'squat' } })?.settings.hiddenExerciseIds).toEqual([]);
   });
 });

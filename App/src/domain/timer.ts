@@ -4,15 +4,32 @@ import type { ActiveSession, AppData, Session } from './types';
 
 /**
  * The session timer: Start → log entries → Stop, or stop by itself after
- * `settings.sessionTimeoutMinutes` without activity. Pure functions over AppData; the caller
- * passes the clock (`now` / epoch ms) so everything is testable.
+ * `settings.sessionTimeoutMinutes` without activity. A count-down instead ends by itself when its
+ * time is up. Pure functions over AppData; the caller passes the clock (`now` / epoch ms) so
+ * everything is testable.
  */
 
-/** Starts a timer (no-op while one is running). No session exists until the first entry. */
-export function startSession(data: AppData, now: Date): AppData {
+/**
+ * Starts a timer (no-op while one is running). No session exists until the first entry.
+ * With `countdownSeconds` it is a count-down that ends by itself after that long.
+ */
+export function startSession(data: AppData, now: Date, countdownSeconds?: number): AppData {
   if (data.activeSession) return data;
   const ms = now.getTime();
-  return { ...data, activeSession: { id: newId(), startedAt: toLocalDateTime(now), startedMs: ms, lastActivityMs: ms } };
+  const active: ActiveSession = { id: newId(), startedAt: toLocalDateTime(now), startedMs: ms, lastActivityMs: ms };
+  if (countdownSeconds !== undefined && countdownSeconds > 0) active.countdownSeconds = Math.round(countdownSeconds);
+  return { ...data, activeSession: active };
+}
+
+/** Epoch ms at which a count-down ends, or null for a timer that counts up. */
+export function countdownEndMs(active: ActiveSession): number | null {
+  return active.countdownSeconds === undefined ? null : active.startedMs + active.countdownSeconds * 1000;
+}
+
+/** Whole seconds left of a count-down (rounded up, so it shows 0:01 until the very end); 0 when up. */
+export function remainingSeconds(active: ActiveSession, nowMs: number): number {
+  const end = countdownEndMs(active);
+  return end === null ? 0 : Math.max(0, Math.ceil((end - nowMs) / 1000));
 }
 
 /**
@@ -62,8 +79,20 @@ export function stopSession(data: AppData, endMs: number): StopResult {
  */
 export function autoStopIfIdle(data: AppData, nowMs: number): StopResult | null {
   const active = data.activeSession;
-  if (!active || nowMs < idleDeadline(active, data.settings.sessionTimeoutMinutes)) return null;
+  if (!active || active.countdownSeconds !== undefined) return null; // a count-down ends on time instead
+  if (nowMs < idleDeadline(active, data.settings.sessionTimeoutMinutes)) return null;
   return stopSession(data, active.lastActivityMs);
+}
+
+/**
+ * Ends a count-down whose time is up, at its end time (also when the app was closed past it),
+ * so the session's duration is exactly the chosen length.
+ */
+export function finishCountdownIfDue(data: AppData, nowMs: number): StopResult | null {
+  const active = data.activeSession;
+  const end = active ? countdownEndMs(active) : null;
+  if (end === null || nowMs < end) return null;
+  return stopSession(data, end);
 }
 
 /** Undo for a stop: the timer runs again (activity counted from `nowMs`) and the duration is cleared. */

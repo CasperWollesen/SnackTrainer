@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { parseBackup, serializeBackup, createBackup, upgradeAppData, validateAppData } from './backup';
 import { addEntry, deleteEntry, updateEntry } from './sessions';
-import { autoStopIfIdle, elapsedSeconds, idleDeadline, resumeSession, startSession, stopSession, touchSession } from './timer';
-import { emptyData, type AppData } from './types';
+import {
+  autoStopIfIdle,
+  countdownEndMs,
+  elapsedSeconds,
+  finishCountdownIfDue,
+  idleDeadline,
+  remainingSeconds,
+  resumeSession,
+  startSession,
+  stopSession,
+  touchSession,
+} from './timer';
+import { DATA_VERSION, emptyData, type AppData } from './types';
 
 const START = new Date(2026, 8, 23, 10, 0, 0); // 23 Sep 2026 10:00:00 local
 const T0 = START.getTime();
@@ -79,7 +90,7 @@ describe('session timer', () => {
   it('upgrades v2 data and validates timer fields', () => {
     const v2 = { version: 2, sessions: [], settings: { sessionGapMinutes: 20, hiddenExerciseIds: ['squat'] } };
     const d = validateAppData(upgradeAppData(v2));
-    expect(d).toMatchObject({ version: 3, activeSession: null, settings: { sessionTimeoutMinutes: 5, hiddenExerciseIds: ['squat'] } });
+    expect(d).toMatchObject({ version: DATA_VERSION, activeSession: null, settings: { sessionTimeoutMinutes: 5, hiddenExerciseIds: ['squat'] } });
 
     let data = startSession(emptyData(), START);
     data = log(data, '2026-09-23T10:02').data;
@@ -92,5 +103,37 @@ describe('session timer', () => {
     expect(validateAppData({ ...running, activeSession: { id: 'x' } })?.activeSession).toBeNull();
     const bad = { ...running, sessions: [{ ...running.sessions[0]!, durationSeconds: -1 }] };
     expect(validateAppData(bad)).toBeNull();
+  });
+
+  describe('count-down', () => {
+    it('counts down and ends by itself at its end time with the chosen length', () => {
+      let d = startSession(emptyData(), START, 300);
+      expect(d.activeSession?.countdownSeconds).toBe(300);
+      expect(countdownEndMs(d.activeSession!)).toBe(T0 + 5 * MIN);
+      expect(remainingSeconds(d.activeSession!, T0 + 500)).toBe(300);
+      expect(remainingSeconds(d.activeSession!, T0 + 4 * MIN + 59_500)).toBe(1);
+      d = log(d, '2026-09-23T10:01').data;
+      expect(finishCountdownIfDue(d, T0 + 4 * MIN)).toBeNull();
+      // Opened long after the end: still exactly five minutes.
+      const r = finishCountdownIfDue(d, T0 + 90 * MIN)!;
+      expect(r.data.activeSession).toBeNull();
+      expect(r.session?.durationSeconds).toBe(300);
+    });
+
+    it('is not stopped by inactivity, and a count-up timer has no end', () => {
+      const down = startSession(emptyData(), START, 20 * 60);
+      expect(autoStopIfIdle(down, T0 + 10 * MIN)).toBeNull();
+      const up = startSession(emptyData(), START);
+      expect(countdownEndMs(up.activeSession!)).toBeNull();
+      expect(remainingSeconds(up.activeSession!, T0)).toBe(0);
+      expect(finishCountdownIfDue(up, T0 + 600 * MIN)).toBeNull();
+    });
+
+    it('leaves nothing behind when nothing was logged', () => {
+      const r = finishCountdownIfDue(startSession(emptyData(), START, 60), T0 + MIN)!;
+      expect(r.session).toBeNull();
+      expect(r.data.sessions).toHaveLength(0);
+      expect(r.data.activeSession).toBeNull();
+    });
   });
 });

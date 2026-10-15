@@ -1,8 +1,8 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_09_r10`
-Last reviewed: `2026-09-25`
+File revision: `2026_10_r11`
+Last reviewed: `2026-10-15`
 
 Related repositories (inspiration, not dependencies):
 - `C:\Development\GitHub\Conrad` – React/Vite/PWA shell, design tokens, sheet/toast/nav components, backup pattern.
@@ -75,6 +75,13 @@ when the app was closed. Logging, working in the log sheet and a running stopwat
 activity; the last minute shows a "Keep going" warning. A timer with nothing logged leaves nothing
 behind. Stop and auto-stop have Undo (the timer runs on). The quick Log button is unchanged.
 
+**Count-down.** Above Start, "Count up | Count-down" picks the mode, and Count-down shows a minutes
+stepper (1–60, default 5). Both are remembered. A count-down shows the time left and a progress bar,
+is never stopped by inactivity and ends by itself exactly at its end time (also when the app was
+closed), so its duration is the chosen length. Then a "Time's up!" sheet sums up what was logged per
+exercise (with Log / Done), with three beeps and a vibration where the browser allows it. Stop
+early works as before, with Undo.
+
 ### Settings
 
 Install hint (iOS: Share → Add to Home Screen; Chromium: install prompt), session gap, export /
@@ -142,6 +149,11 @@ launch each day; replay from the menu.
 15. **The splash state is device-local UI state outside `AppData`** (`snacktrainer.splash`:
     `shownCount`, `lastShownDate`), read and written only by `repository.ts`. No data version bump, not in
     backups, not reset by "delete everything". Share moved from Settings to its own menu item.
+16. **A count-down is the same timer with an end** (`activeSession.countdownSeconds`), not a second
+    timer kind: entries, Stop, Undo and the session's `durationSeconds` all work unchanged. It ends at
+    `startedMs + countdownSeconds` (`finishCountdownIfDue`), not on inactivity. The summary is a sheet
+    instead of a toast because the phone may have been put down; it waits until an open sheet closes.
+    The end beep uses Web Audio unlocked on the Start tap (`ui/sound.ts`); no notifications. Data version 4.
 
 ## Data Model
 
@@ -178,10 +190,11 @@ interface ActiveSession {    // v3: the running timer
   startedAt: string;   // local wall-clock start
   startedMs: number;   // epoch ms
   lastActivityMs: number;
+  countdownSeconds?: number; // v4: set for a count-down
 }
 
 interface AppData {
-  version: 3;              // 1 -> 2 hiddenExerciseIds; 2 -> 3 timer
+  version: 4;              // 1 -> 2 hiddenExerciseIds; 2 -> 3 timer; 3 -> 4 count-down
   sessions: Session[];        // sorted by startedAt
   customExercises: Exercise[];
   settings: {
@@ -189,6 +202,8 @@ interface AppData {
     installHintDismissed: boolean;
     hiddenExerciseIds: string[];   // added in version 2
     sessionTimeoutMinutes: number; // added in version 3, default 5
+    timerMode: 'up' | 'down';      // added in version 4, default 'up'
+    countdownMinutes: number;      // added in version 4, default 5
   };
   activeSession: ActiveSession | null;
 }
@@ -263,6 +278,10 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 
 - [x] Splash screen: 5 first launches then daily, changing emojis, rotating messages, Skip with progress
 - [x] Menu: Exercises · Settings · Share · Splash screen (Share moved out of Settings)
+
+### Milestone 6 – Count-down and daily goals
+
+- [x] Count-down snack session: choose minutes, time left + progress, ends by itself, summary sheet, beep
 
 ### Ideas parked (not planned)
 

@@ -17,7 +17,9 @@ import { useInstallPrompt } from './ui/hooks/useInstallPrompt';
 import { useNow } from './ui/hooks/useNow';
 import { useSplash } from './ui/hooks/useSplash';
 import { ToastProvider, useToast } from './ui/hooks/useToast';
-import { useActions } from './ui/useActions';
+import { playTimeUp } from './ui/sound';
+import { useActions, type CountdownFinished } from './ui/useActions';
+import { CountdownDoneSheet } from './ui/views/CountdownDoneSheet';
 import { EntrySheet } from './ui/views/EntrySheet';
 import { ExerciseEditor } from './ui/views/ExerciseEditor';
 import { ExerciseSheet } from './ui/views/ExerciseSheet';
@@ -78,12 +80,18 @@ function Shell() {
 
   const closeOverlay = useCallback(() => setOverlay({ kind: 'none' }), []);
 
-  // Session timer: tick every second while it runs and stop it once it has been idle too long
-  // (also right after opening the app, when it may have been closed for a while).
+  // Session timer: tick every second while it runs; end a count-down whose time is up and stop
+  // a count-up timer that has been idle too long (also right after opening the app).
   const timerRunning = data.activeSession !== null;
   const nowMs = useNow(timerRunning);
+  const [countdownDone, setCountdownDone] = useState<CountdownFinished | null>(null);
   useEffect(() => {
-    if (timerRunning) actions.autoStopTimer();
+    if (!timerRunning) return;
+    const finished = actions.autoStopTimer();
+    if (!finished) return;
+    // The summary waits until an open sheet (e.g. the log sheet mid-entry) is closed.
+    setCountdownDone(finished);
+    if (!finished.late) playTimeUp();
   }, [timerRunning, nowMs, actions]);
   const openEntry = data.sessions.length > 0 && overlay.kind === 'entry' ? (findEntry(data, overlay.entryId)?.entry ?? null) : null;
 
@@ -257,6 +265,17 @@ function Shell() {
       <SettingsSheet open={overlay.kind === 'settings'} data={data} onClose={closeOverlay} install={install} onDemo={actions.setDemo} />
 
       <ShareSheet open={overlay.kind === 'share'} onClose={closeOverlay} />
+
+      <CountdownDoneSheet
+        finished={overlay.kind === 'none' ? countdownDone : null}
+        data={data}
+        onClose={() => setCountdownDone(null)}
+        onLog={() => {
+          setCountdownDone(null);
+          setDate(today);
+          openLog(null);
+        }}
+      />
 
       <SplashScreen splash={splash.current} onClose={splash.close} />
     </div>

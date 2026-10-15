@@ -9,6 +9,9 @@ export type LocalDateTime = string;
 
 export type ExerciseMode = 'reps' | 'time';
 
+/** How the snack session timer runs: counting up until Stop, or counting down a set time. */
+export type TimerMode = 'up' | 'down';
+
 export interface Exercise {
   /** Slug for built-ins ("push-up"); "custom-<random>" for user-created exercises. */
   id: string;
@@ -56,6 +59,11 @@ export interface ActiveSession {
   /** Epoch milliseconds of the start and of the last activity (for the timer and auto-stop). */
   startedMs: number;
   lastActivityMs: number;
+  /**
+   * v4: set for a count-down. The session ends by itself `countdownSeconds` after the start
+   * (no idle auto-stop); absent for a timer that counts up.
+   */
+  countdownSeconds?: number;
 }
 
 export interface Settings {
@@ -66,13 +74,18 @@ export interface Settings {
   hiddenExerciseIds: string[];
   /** A running session timer stops by itself after this many minutes without activity. */
   sessionTimeoutMinutes: number;
+  /** v4: the timer mode last chosen on Today. */
+  timerMode: TimerMode;
+  /** v4: length of a count-down, in minutes. */
+  countdownMinutes: number;
 }
 
 /**
  * 2: settings.hiddenExerciseIds. 3: activeSession, Session.durationSeconds,
- * settings.sessionTimeoutMinutes. Older data is upgraded by `upgradeAppData`.
+ * settings.sessionTimeoutMinutes. 4: count-down (activeSession.countdownSeconds,
+ * settings.timerMode, settings.countdownMinutes). Older data is upgraded by `upgradeAppData`.
  */
-export const DATA_VERSION = 3;
+export const DATA_VERSION = 4;
 
 export interface AppData {
   version: typeof DATA_VERSION;
@@ -89,6 +102,8 @@ export const DEFAULT_SETTINGS: Settings = {
   installHintDismissed: false,
   hiddenExerciseIds: [],
   sessionTimeoutMinutes: 5,
+  timerMode: 'up',
+  countdownMinutes: 5,
 };
 
 export function emptyData(): AppData {

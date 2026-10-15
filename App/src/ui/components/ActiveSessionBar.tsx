@@ -1,5 +1,6 @@
-import { Plus, Square, Timer } from 'lucide-react';
-import { elapsedSeconds, idleDeadline } from '../../domain/timer';
+import { Hourglass, Plus, Square, Timer } from 'lucide-react';
+import { toTimeString } from '../../domain/dates';
+import { countdownEndMs, elapsedSeconds, idleDeadline, remainingSeconds } from '../../domain/timer';
 import { totalsOf } from '../../domain/sessions';
 import type { AppData } from '../../domain/types';
 import { texts } from '../../texts';
@@ -14,15 +15,23 @@ export interface ActiveSessionBarProps {
   onKeepGoing: () => void;
 }
 
-/** Shown on every tab while a snack session timer runs: elapsed time, what was logged, Log and Stop. */
+/**
+ * Shown on every tab while a snack session timer runs: elapsed time (or the time left of a
+ * count-down, with a progress bar), what was logged, Log and Stop.
+ */
 export function ActiveSessionBar({ data, nowMs, onLog, onStop, onKeepGoing }: ActiveSessionBarProps) {
   const active = data.activeSession;
   if (!active) return null;
   const session = data.sessions.find((s) => s.id === active.id);
   const totals = session ? totalsOf([session]) : null;
   const timeout = data.settings.sessionTimeoutMinutes;
+  const endMs = countdownEndMs(active);
+  const countdown = endMs !== null;
+  const remaining = remainingSeconds(active, nowMs);
   const leftMs = idleDeadline(active, timeout) - nowMs;
-  const warning = leftMs <= 60_000;
+  const warning = countdown ? remaining <= 10 : leftMs <= 60_000;
+  const Icon = countdown ? Hourglass : Timer;
+  const label = countdown ? texts.timer.countdown : texts.timer.running;
 
   const summary = totals
     ? [texts.timer.entries(totals.entries), totals.reps > 0 ? `${totals.reps} ${texts.common.reps}` : '', totals.seconds > 0 ? formatDuration(totals.seconds) : '']
@@ -31,13 +40,13 @@ export function ActiveSessionBar({ data, nowMs, onLog, onStop, onKeepGoing }: Ac
     : texts.timer.nothingYet;
 
   return (
-    <section className={`timerbar${warning ? ' timerbar--warning' : ''}`} aria-label={texts.timer.running}>
+    <section className={`timerbar${warning ? ' timerbar--warning' : ''}`} aria-label={label}>
       <div className="timerbar__main">
-        <Timer size={22} className="timerbar__icon" aria-hidden="true" />
+        <Icon size={22} className="timerbar__icon" aria-hidden="true" />
         <div className="timerbar__text">
-          <span className="timerbar__label">{texts.timer.running}</span>
+          <span className="timerbar__label">{label}</span>
           <span className="timerbar__clock" role="timer">
-            {formatDuration(elapsedSeconds(active, nowMs))}
+            {formatDuration(countdown ? remaining : elapsedSeconds(active, nowMs))}
           </span>
           <span className="timerbar__meta">{summary}</span>
         </div>
@@ -50,7 +59,14 @@ export function ActiveSessionBar({ data, nowMs, onLog, onStop, onKeepGoing }: Ac
           </Button>
         </div>
       </div>
-      {warning ? (
+      {countdown ? (
+        <>
+          <div className="timerbar__progress" aria-hidden="true">
+            <span style={{ width: `${Math.min(100, (elapsedSeconds(active, nowMs) / (active.countdownSeconds ?? 1)) * 100)}%` }} />
+          </div>
+          <p className="timerbar__hint">{texts.timer.endsAt(toTimeString(new Date(endMs)))}</p>
+        </>
+      ) : warning ? (
         <div className="timerbar__warning" role="status">
           <span>{texts.timer.stoppingIn(formatDuration(Math.max(0, Math.ceil(leftMs / 1000))))}</span>
           <Button size="sm" variant="ghost" onClick={onKeepGoing}>

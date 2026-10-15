@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_10_r14`
+File revision: `2026_10_r15`
 Last reviewed: `2026-10-15`
 
 Related repositories (inspiration, not dependencies):
@@ -160,6 +160,7 @@ launch each day; replay from the menu.
 18. **The screen stays on while a session timer runs** (Screen Wake Lock API, `ui/hooks/useWakeLock.ts`,
     same pattern as CW.ShowerTimer), so a phone on the floor does not lock and freeze a count-down. Local
     only. Notifications for a closed or locked app would need Web Push through a server, which stays a non-goal.
+    The owner confirmed (2026-10-15): no push notifications; if the screen goes off, turning it on is up to the user.
 
 ## Data Model
 

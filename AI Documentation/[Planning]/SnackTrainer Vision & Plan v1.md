@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_10_r18`
+File revision: `2026_10_r19`
 Last reviewed: `2026-10-15`
 
 Related repositories (inspiration, not dependencies):
@@ -35,7 +35,7 @@ counting, weights, social features, streak gamification.
 | Tab | What it shows |
 |---|---|
 | **Today** | The selected day (default today) with ← / → to step back and forth. Stat tiles (reps, time, sessions), the day's **goals** (per day and per week) with progress and streak, and the list of sessions, each with its clock time and the entries logged in it ("07:30 · 20 Push-Up"). Tap an entry to edit or delete it. |
-| **History** | Period: **Day** (default), **Week** (ISO, Mon–Sun), **Month**, rolling **7 days** / **31 days**, with ← / → back in time and "Now". Exercise filter and Reps / Time / Sessions metric. Stat tiles with change against the previous period (running week/month compared "so far"), a breakdown chart (by hour for a day, by day otherwise; tapping a day opens it as a Day), a trend over the last 12–14 periods (tap to jump), the active days (open on Today) and a per-exercise breakdown with change (opens the exercise page). A **Nerd view** toggle adds averages, records, time-of-day and weekday charts, streaks and all-time totals. |
+| **History** | Period: **Day** (default), **Week** (ISO, Mon–Sun), **Month**, rolling **7 days** / **31 days**, with ← / → back in time and "Now". Exercise filter and Reps / Time / Sessions metric. Stat tiles with change against the previous period (running week/month compared "so far"), a breakdown chart (by hour for a day, by day otherwise; tapping a day opens it as a Day), a trend over the last 12–14 periods (tap to jump), the active days (open on Today) and a per-exercise breakdown with change (opens the exercise page). With **Week** selected, a **week summary** lists the highlights (totals, best day, top exercise, new best sets, first-time exercises, goals). A **Nerd view** toggle adds averages, records, time-of-day and weekday charts, streaks and all-time totals. |
 | **Exercises** | Search box, "Recent" first (every exercise used so far, one per row, most recently used at the top), then all visible exercises grouped by category. Tapping an exercise opens its **exercise page**. Custom exercises can be added. "Hide N unused" hides every never-logged built-in at once; a "Hidden" section lists hidden exercises with "Show all". |
 
 **Exercise page** (sheet): totals, sessions, best session (most reps or longest time summed over one session) and best set (single entry), a 4-week daily / 26-week weekly chart and every session with the exercise (the best one marked; tapping one opens that day). Footer: Hide / Show again, Edit (custom only), Log.
@@ -303,6 +303,7 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 - [x] Start sheet (choose Count up / Count-down) and Discard a running session (with Undo)
 - [x] Weekly goals (ISO week): "this week" progress with an even-pace mark, week streaks, History week line
 - [x] Bodyweight-only goal scope
+- [x] Week summary in History (highlights for the selected week)
 
 ### Ideas parked (not planned)
 

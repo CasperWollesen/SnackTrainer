@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { compareISO, isoWeekNumber, parseISODate } from '../../domain/dates';
 import { allExercises, findExercise, unknownExercise } from '../../domain/exercises';
 import { daysAllGoalsMet, goalProgress } from '../../domain/goals';
+import { weekSummary } from '../../domain/weekSummary';
 import { comparisonFor, containsDate, isLatest, periodAt, recentPeriods, shiftPeriod, type Period, type PeriodKind } from '../../domain/periods';
 import { dailyTotals, exerciseTotals, sessionsBetween, sessionsWithExercise } from '../../domain/sessions';
 import { deltaOf, hourlyTotals, summarize, type Metric } from '../../domain/stats';
@@ -15,6 +16,7 @@ import { Toggle } from '../components/FormFields';
 import { Section } from '../components/Section';
 import { StatTiles } from '../components/StatTiles';
 import { chartValue, formatChartValue, formatDateRange, formatDelta, formatDuration, formatPeriod, formatRelativeDay, formatTotalTime } from '../format';
+import { WeekSummaryCard } from '../components/WeekSummaryCard';
 import { NerdPanel } from './NerdPanel';
 
 /** History's view state; kept in App so it survives switching tabs. */
@@ -88,8 +90,8 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
 
   // Goals are about the whole day, so they use all data, not the exercise filter.
   const hasGoals = data.settings.goals.some((g) => g.period === 'day');
-  const hasWeekGoals = data.settings.goals.some((g) => g.period === 'week');
   const goalDays = useMemo(() => daysAllGoalsMet(data, period.from, period.to), [data, period.from, period.to]);
+  const summary = useMemo(() => (state.kind === 'week' ? weekSummary(data, period.from, today) : null), [data, state.kind, period.from, today]);
 
   const usedExercises = useMemo(() => {
     const used = new Set(data.sessions.flatMap((s) => s.entries.map((e) => e.exerciseId)));
@@ -145,15 +147,10 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
     const progress = goalProgress(data, period.from).filter((p) => p.goal.period === 'day');
     const done = progress.filter((p) => p.done).length;
     goalsLine = done === progress.length ? texts.history.goalsMetDay : texts.history.goalsSomeMetDay(done, progress.length);
-  } else if (hasGoals) {
+  } else if (hasGoals && !summary) {
+    // (A week's goals are in the week summary instead.)
     const elapsed = [...goalDays].filter((d) => compareISO(d, comparison.current.from) >= 0 && compareISO(d, comparison.current.to) <= 0);
     goalsLine = texts.history.goalsMetDays(elapsed.length, current.days);
-  }
-  // A week period also shows its week goals (as of the week's last elapsed day).
-  let weekGoalsLine: string | null = null;
-  if (hasWeekGoals && state.kind === 'week') {
-    const progress = goalProgress(data, comparison.current.to).filter((p) => p.goal.period === 'week');
-    weekGoalsLine = texts.history.weekGoalsMet(progress.filter((p) => p.done).length, progress.length);
   }
 
   // --- breakdown chart: hours for a day, days otherwise
@@ -243,7 +240,18 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
         {comparison.partial ? texts.history.comparedSoFar(comparedRange) : texts.history.compared(comparedRange)}
       </p>
       {goalsLine ? <p className="history__goals">{goalsLine}</p> : null}
-      {weekGoalsLine ? <p className="history__goals">{weekGoalsLine}</p> : null}
+
+      {summary ? (
+        <Section title={summary.running ? texts.history.summary.titleRunning : texts.history.summary.title}>
+          <WeekSummaryCard
+            summary={summary}
+            data={data}
+            onOpenDay={(d) => onChange({ kind: 'day', anchor: d })}
+            onOpenExercise={onOpenExercise}
+          />
+          {state.exerciseId ? <p className="field__hint">{texts.history.summary.hint}</p> : null}
+        </Section>
+      ) : null}
 
       <Section title={isDay ? texts.history.byHour : texts.history.byDay}>
         <div className="card">

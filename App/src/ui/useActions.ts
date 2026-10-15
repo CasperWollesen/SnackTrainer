@@ -1,13 +1,16 @@
 import { useCallback, useMemo } from 'react';
 import { removeDemoData, withDemoData } from '../domain/demo';
 import { autoStopIfIdle, countdownEndMs, finishCountdownIfDue, resumeSession, startSession, stopSession, touchSession, type StopResult } from '../domain/timer';
+import { dateOf } from '../domain/dates';
 import { findExercise, unknownExercise, withHidden } from '../domain/exercises';
+import { newlyReachedGoals, withGoal, withoutGoal } from '../domain/goals';
 import { addEntry, deleteEntry, findEntry, restoreEntry, updateEntry, type Amount, type NewEntry } from '../domain/sessions';
-import type { Exercise, LocalDateTime, Session } from '../domain/types';
+import type { DailyGoal, Exercise, LocalDateTime, Session } from '../domain/types';
 import { repository } from '../storage/repository';
 import { texts } from '../texts';
 import { formatDuration, formatEntrySummary } from './format';
 import { unlockSound } from './sound';
+import { goalScope } from './components/GoalList';
 import { useToast } from './hooks/useToast';
 
 /** A count-down that ended by itself; App shows its summary. */
@@ -35,10 +38,14 @@ export function useActions() {
 
   const log = useCallback(
     (input: NewEntry) => {
-      const result = addEntry(repository.get(), input);
+      const before = repository.get();
+      const result = addEntry(before, input);
       repository.replaceAll(touchSession(result.data, Date.now()));
       const exercise = findExercise(result.data, input.exerciseId) ?? unknownExercise(input.exerciseId);
-      afterWrite(texts.toast.logged(formatEntrySummary(result.entry, exercise)), () => {
+      const logged = texts.toast.logged(formatEntrySummary(result.entry, exercise));
+      const reached = newlyReachedGoals(before, result.data, dateOf(result.entry.at));
+      const message = reached.length > 0 ? texts.toast.goalReached(logged, reached.map((g) => goalScope(g, result.data).name).join(', ')) : logged;
+      afterWrite(message, () => {
         repository.update((d) => deleteEntry(d, result.entry.id));
       });
       return result;
@@ -63,6 +70,23 @@ export function useActions() {
       afterWrite(texts.toast.deleted, () => {
         repository.update((d) => restoreEntry(d, before.session, before.entry));
       });
+    },
+    [afterWrite],
+  );
+
+  const saveGoal = useCallback(
+    (goal: DailyGoal) => {
+      repository.setSettings({ dailyGoals: withGoal(repository.get().settings.dailyGoals, goal) });
+      afterWrite(texts.toast.goalSaved);
+    },
+    [afterWrite],
+  );
+
+  const deleteGoal = useCallback(
+    (goal: DailyGoal) => {
+      const before = repository.get().settings.dailyGoals;
+      repository.setSettings({ dailyGoals: withoutGoal(before, goal.id) });
+      afterWrite(texts.toast.goalDeleted, () => repository.setSettings({ dailyGoals: before }));
     },
     [afterWrite],
   );
@@ -167,7 +191,7 @@ export function useActions() {
   }, []);
 
   return useMemo(
-    () => ({ log, edit, remove, saveExercise, deleteExercise, setHidden, setDemo, startTimer, stopTimer, autoStopTimer, touchTimer }),
-    [log, edit, remove, saveExercise, deleteExercise, setHidden, setDemo, startTimer, stopTimer, autoStopTimer, touchTimer],
+    () => ({ log, edit, remove, saveGoal, deleteGoal, saveExercise, deleteExercise, setHidden, setDemo, startTimer, stopTimer, autoStopTimer, touchTimer }),
+    [log, edit, remove, saveGoal, deleteGoal, saveExercise, deleteExercise, setHidden, setDemo, startTimer, stopTimer, autoStopTimer, touchTimer],
   );
 }

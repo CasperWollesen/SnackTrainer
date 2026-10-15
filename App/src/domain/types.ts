@@ -66,6 +66,20 @@ export interface ActiveSession {
   countdownSeconds?: number;
 }
 
+export type GoalMetric = 'reps' | 'time' | 'sessions';
+
+/**
+ * v5: a daily goal. `target` is reps, seconds or sessions per day. With `exerciseId` only that
+ * exercise counts, with `category` only exercises in that category; neither means everything.
+ */
+export interface DailyGoal {
+  id: string;
+  metric: GoalMetric;
+  target: number;
+  exerciseId?: string;
+  category?: string;
+}
+
 export interface Settings {
   /** Minutes since the previous entry within which a new entry joins the same session. */
   sessionGapMinutes: number;
@@ -78,14 +92,17 @@ export interface Settings {
   timerMode: TimerMode;
   /** v4: length of a count-down, in minutes. */
   countdownMinutes: number;
+  /** v5: daily goals, shown on Today in this order. */
+  dailyGoals: DailyGoal[];
 }
 
 /**
  * 2: settings.hiddenExerciseIds. 3: activeSession, Session.durationSeconds,
  * settings.sessionTimeoutMinutes. 4: count-down (activeSession.countdownSeconds,
- * settings.timerMode, settings.countdownMinutes). Older data is upgraded by `upgradeAppData`.
+ * settings.timerMode, settings.countdownMinutes). 5: settings.dailyGoals.
+ * Older data is upgraded by `upgradeAppData`.
  */
-export const DATA_VERSION = 4;
+export const DATA_VERSION = 5;
 
 export interface AppData {
   version: typeof DATA_VERSION;
@@ -104,6 +121,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sessionTimeoutMinutes: 5,
   timerMode: 'up',
   countdownMinutes: 5,
+  dailyGoals: [],
 };
 
 export function emptyData(): AppData {
@@ -111,7 +129,7 @@ export function emptyData(): AppData {
     version: DATA_VERSION,
     sessions: [],
     customExercises: [],
-    settings: { ...DEFAULT_SETTINGS, hiddenExerciseIds: [] },
+    settings: { ...DEFAULT_SETTINGS, hiddenExerciseIds: [], dailyGoals: [] },
     activeSession: null,
   };
 }

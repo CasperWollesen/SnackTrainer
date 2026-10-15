@@ -55,7 +55,7 @@ describe('backup', () => {
     };
     const data = validateAppData(raw);
     expect(data?.sessions.map((s) => s.id)).toEqual(['a', 'b']);
-    expect(data?.settings).toEqual({ sessionGapMinutes: 20, installHintDismissed: false, hiddenExerciseIds: [], sessionTimeoutMinutes: 5, timerMode: 'up', countdownMinutes: 5 });
+    expect(data?.settings).toEqual({ sessionGapMinutes: 20, installHintDismissed: false, hiddenExerciseIds: [], sessionTimeoutMinutes: 5, timerMode: 'up', countdownMinutes: 5, dailyGoals: [] });
     expect(data?.customExercises).toEqual([]);
   });
 
@@ -69,7 +69,7 @@ describe('backup', () => {
     const data = validateAppData(upgradeAppData(v1));
     expect(data?.version).toBe(DATA_VERSION);
     expect(data?.activeSession).toBeNull();
-    expect(data?.settings).toEqual({ sessionGapMinutes: 30, installHintDismissed: true, hiddenExerciseIds: [], sessionTimeoutMinutes: 5, timerMode: 'up', countdownMinutes: 5 });
+    expect(data?.settings).toEqual({ sessionGapMinutes: 30, installHintDismissed: true, hiddenExerciseIds: [], sessionTimeoutMinutes: 5, timerMode: 'up', countdownMinutes: 5, dailyGoals: [] });
 
     const parsed = parseBackup(JSON.stringify({ app: 'snacktrainer', formatVersion: 1, exportedAt: 'x', data: v1 }));
     expect(parsed.ok && parsed.data.version).toBe(DATA_VERSION);

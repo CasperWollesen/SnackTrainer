@@ -1,9 +1,9 @@
-import { Dumbbell, FlaskConical, QrCode, Settings, Smartphone, Sparkles, X } from 'lucide-react';
+import { Dumbbell, FlaskConical, QrCode, Settings, Smartphone, Sparkles, Target, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { hasDemoData } from './domain/demo';
 import { findEntry } from './domain/sessions';
 import { findExercise, isBuiltIn, unknownExercise } from './domain/exercises';
-import type { Entry, Exercise, ISODate } from './domain/types';
+import type { DailyGoal, Entry, Exercise, ISODate } from './domain/types';
 import { repository } from './storage/repository';
 import { texts } from './texts';
 import { Button, IconButton } from './ui/components/Button';
@@ -24,6 +24,8 @@ import { EntrySheet } from './ui/views/EntrySheet';
 import { ExerciseEditor } from './ui/views/ExerciseEditor';
 import { ExerciseSheet } from './ui/views/ExerciseSheet';
 import { ExercisesView } from './ui/views/ExercisesView';
+import { GoalEditor } from './ui/views/GoalEditor';
+import { GoalsSheet } from './ui/views/GoalsSheet';
 import { HistoryView, initialHistoryState, type HistoryState } from './ui/views/HistoryView';
 import { LogSheet } from './ui/views/LogSheet';
 import { MenuSheet, type MenuItem } from './ui/views/MenuSheet';
@@ -40,6 +42,8 @@ type Overlay =
   | { kind: 'exerciseInfo'; exerciseId: string }
   | { kind: 'settings' }
   | { kind: 'share' }
+  | { kind: 'goals' }
+  | { kind: 'goal'; goal: DailyGoal | null }
   | { kind: 'menu' };
 
 export function App() {
@@ -124,6 +128,7 @@ function Shell() {
         closeOverlay();
       },
     },
+    { id: 'goals', label: texts.goals.title, hint: texts.nav.goalsHint, icon: Target, onSelect: () => setOverlay({ kind: 'goals' }) },
     { id: 'settings', label: texts.settings.title, hint: texts.nav.settingsHint, icon: Settings, onSelect: () => setOverlay({ kind: 'settings' }) },
     { id: 'share', label: texts.share.title, hint: texts.nav.shareHint, icon: QrCode, onSelect: () => setOverlay({ kind: 'share' }) },
     {
@@ -200,6 +205,7 @@ function Shell() {
             onChangeDate={setDate}
             onOpenEntry={(entry: Entry) => setOverlay({ kind: 'entry', entryId: entry.id })}
             onStartSession={actions.startTimer}
+            onOpenGoals={() => setOverlay({ kind: 'goals' })}
           />
         ) : tab === 'history' ? (
           <HistoryView data={data} today={today} state={history} onChange={changeHistory} onOpenDay={openDay} onOpenExercise={openExercise} />
@@ -265,6 +271,25 @@ function Shell() {
       <SettingsSheet open={overlay.kind === 'settings'} data={data} onClose={closeOverlay} install={install} onDemo={actions.setDemo} />
 
       <ShareSheet open={overlay.kind === 'share'} onClose={closeOverlay} />
+
+      <GoalsSheet open={overlay.kind === 'goals'} data={data} today={today} onClose={closeOverlay} onEdit={(goal) => setOverlay({ kind: 'goal', goal })} />
+
+      <GoalEditor
+        open={overlay.kind === 'goal'}
+        goal={overlay.kind === 'goal' ? overlay.goal : null}
+        data={data}
+        onBack={() => setOverlay({ kind: 'goals' })}
+        onClose={closeOverlay}
+        onSave={(goal) => {
+          actions.saveGoal(goal);
+          setOverlay({ kind: 'goals' });
+        }}
+        onDelete={(goal) => {
+          // Close first: the modal sheet makes the toast (and its Undo) unreachable.
+          closeOverlay();
+          actions.deleteGoal(goal);
+        }}
+      />
 
       <CountdownDoneSheet
         finished={overlay.kind === 'none' ? countdownDone : null}

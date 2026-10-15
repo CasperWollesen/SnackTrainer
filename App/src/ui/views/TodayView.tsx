@@ -1,7 +1,8 @@
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Hourglass, Timer, Zap } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Hourglass, Target, Timer, Zap } from 'lucide-react';
 import { useMemo } from 'react';
 import { addDays, timeOf } from '../../domain/dates';
 import { isDemoId } from '../../domain/demo';
+import { goalProgress, goalStreak } from '../../domain/goals';
 import { findExercise, unknownExercise } from '../../domain/exercises';
 import { sessionsOn, totalsOf } from '../../domain/sessions';
 import type { AppData, Entry, ISODate, Session, TimerMode } from '../../domain/types';
@@ -9,6 +10,7 @@ import { repository } from '../../storage/repository';
 import { texts } from '../../texts';
 import { Button, IconButton, Segmented } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
+import { GoalList } from '../components/GoalList';
 import { Stepper } from '../components/FormFields';
 import { Section } from '../components/Section';
 import { StatTiles } from '../components/StatTiles';
@@ -21,9 +23,10 @@ export interface TodayViewProps {
   onChangeDate: (date: ISODate) => void;
   onOpenEntry: (entry: Entry) => void;
   onStartSession: () => void;
+  onOpenGoals: () => void;
 }
 
-export function TodayView({ data, date, today, onChangeDate, onOpenEntry, onStartSession }: TodayViewProps) {
+export function TodayView({ data, date, today, onChangeDate, onOpenEntry, onStartSession, onOpenGoals }: TodayViewProps) {
   const sessions = useMemo(() => sessionsOn(data, date), [data, date]);
   const totals = useMemo(() => totalsOf(sessions), [sessions]);
   const isToday = date === today;
@@ -56,6 +59,8 @@ export function TodayView({ data, date, today, onChangeDate, onOpenEntry, onStar
         ]}
       />
 
+      <GoalsSection data={data} date={date} today={today} onOpen={onOpenGoals} />
+
       {isToday && !data.activeSession ? <StartSession data={data} onStart={onStartSession} /> : null}
 
       {sessions.length === 0 ? (
@@ -70,6 +75,35 @@ export function TodayView({ data, date, today, onChangeDate, onOpenEntry, onStar
         </Section>
       )}
     </div>
+  );
+}
+
+/** The day's goal progress (streaks only for today); a "Set a daily goal" link while there are none. */
+function GoalsSection({ data, date, today, onOpen }: { data: AppData; date: ISODate; today: ISODate; onOpen: () => void }) {
+  const progress = useMemo(() => goalProgress(data, date), [data, date]);
+  const streaks = useMemo(
+    () => (date === today ? new Map(data.settings.dailyGoals.map((g) => [g.id, goalStreak(data, g, today)])) : undefined),
+    [data, date, today],
+  );
+  if (progress.length === 0) {
+    return date === today ? (
+      <Button variant="ghost" size="sm" icon={<Target size={16} />} onClick={onOpen}>
+        {texts.goals.setGoal}
+      </Button>
+    ) : null;
+  }
+  const done = progress.filter((p) => p.done).length;
+  return (
+    <Section
+      title={texts.goals.section}
+      action={
+        <Button variant="ghost" size="sm" onClick={onOpen}>
+          {texts.goals.doneCount(done, progress.length)}
+        </Button>
+      }
+    >
+      <GoalList progress={progress} data={data} streaks={streaks} onSelect={onOpen} />
+    </Section>
   );
 }
 

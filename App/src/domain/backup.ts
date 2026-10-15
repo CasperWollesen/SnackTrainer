@@ -1,5 +1,5 @@
 import { compareISO, isISODate, isLocalDateTime } from './dates';
-import { DATA_VERSION, DEFAULT_SETTINGS, type ActiveSession, type AppData, type Entry, type Exercise, type Session, type Settings } from './types';
+import { DATA_VERSION, DEFAULT_SETTINGS, type ActiveSession, type AppData, type DailyGoal, type Entry, type Exercise, type Session, type Settings } from './types';
 
 export const BACKUP_APP_ID = 'snacktrainer';
 export const BACKUP_FORMAT_VERSION = 1;
@@ -128,7 +128,7 @@ function validateExercise(raw: unknown): Exercise | null {
 }
 
 function validateSettings(raw: unknown): Settings {
-  const s: Settings = { ...DEFAULT_SETTINGS, hiddenExerciseIds: [] };
+  const s: Settings = { ...DEFAULT_SETTINGS, hiddenExerciseIds: [], dailyGoals: [] };
   if (!isRecord(raw)) return s;
   if (typeof raw.sessionGapMinutes === 'number' && raw.sessionGapMinutes >= 0 && raw.sessionGapMinutes <= 24 * 60) {
     s.sessionGapMinutes = Math.round(raw.sessionGapMinutes);
@@ -144,7 +144,28 @@ function validateSettings(raw: unknown): Settings {
   if (typeof raw.countdownMinutes === 'number' && raw.countdownMinutes >= 1 && raw.countdownMinutes <= 120) {
     s.countdownMinutes = Math.round(raw.countdownMinutes);
   }
+  if (Array.isArray(raw.dailyGoals)) {
+    const ids = new Set<string>();
+    for (const g of raw.dailyGoals) {
+      const goal = validateGoal(g);
+      if (goal && !ids.has(goal.id)) {
+        ids.add(goal.id);
+        s.dailyGoals.push(goal);
+      }
+    }
+  }
   return s;
+}
+
+/** A goal that cannot be read is dropped, never a reason to reject the data. */
+function validateGoal(raw: unknown): DailyGoal | null {
+  if (!isRecord(raw) || !isNonEmptyString(raw.id)) return null;
+  if (raw.metric !== 'reps' && raw.metric !== 'time' && raw.metric !== 'sessions') return null;
+  if (!isNonNegativeInt(raw.target) || raw.target === 0) return null;
+  const goal: DailyGoal = { id: raw.id, metric: raw.metric, target: raw.target };
+  if (isNonEmptyString(raw.exerciseId)) goal.exerciseId = raw.exerciseId;
+  else if (isNonEmptyString(raw.category)) goal.category = raw.category;
+  return goal;
 }
 
 /** A running timer that cannot be read is dropped (null), never a reason to reject the data. */
@@ -182,6 +203,10 @@ export function upgradeAppData(raw: unknown): unknown {
   if (data.version === 3) {
     // 3 -> 4: count-down; the new settings fall back to their defaults in validateSettings.
     data = { ...data, version: 4 };
+  }
+  if (data.version === 4) {
+    // 4 -> 5: no daily goals yet (validateSettings defaults the list).
+    data = { ...data, version: 5 };
   }
   return data;
 }

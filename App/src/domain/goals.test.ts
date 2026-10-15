@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { upgradeAppData, validateAppData } from './backup';
-import { clampTarget, goalProgress, goalStreak, newlyReachedGoals, withGoal, withoutGoal } from './goals';
+import { clampTarget, daysAllGoalsMet, goalProgress, goalStreak, newlyReachedGoals, withGoal, withoutGoal } from './goals';
 import { addEntry, type Amount } from './sessions';
 import { DATA_VERSION, emptyData, type AppData, type DailyGoal } from './types';
 
@@ -51,6 +51,19 @@ describe('daily goals', () => {
     d = log(d, 'push-up', '2026-10-15T09:00', { reps: 20 });
     expect(goalStreak(d, PUSH_UPS, '2026-10-15')).toBe(3);
     expect(goalStreak(d, PUSH_UPS, '2026-10-17')).toBe(0);
+  });
+
+  it('finds the days in a range where every goal was met', () => {
+    let d = withGoals(emptyData(), [PUSH_UPS, SNACKS]);
+    d = log(d, 'push-up', '2026-10-12T08:00', { reps: 30 });
+    d = log(d, 'push-up', '2026-10-12T15:00', { reps: 5 }); // two snacks + 35 push-ups: met
+    d = log(d, 'push-up', '2026-10-13T08:00', { reps: 40 }); // one snack only: not met
+    d = log(d, 'squat', '2026-10-14T08:00', { reps: 30 });
+    d = log(d, 'squat', '2026-10-14T15:00', { reps: 30 }); // two snacks, no push-ups: not met
+    d = log(d, 'push-up', '2026-10-20T08:00', { reps: 30 });
+    d = log(d, 'push-up', '2026-10-20T15:00', { reps: 30 }); // met, but outside the range
+    expect([...daysAllGoalsMet(d, '2026-10-12', '2026-10-18')]).toEqual(['2026-10-12']);
+    expect(daysAllGoalsMet(withGoals(d, []), '2026-10-01', '2026-10-31').size).toBe(0);
   });
 
   it('edits the goal list and clamps targets', () => {

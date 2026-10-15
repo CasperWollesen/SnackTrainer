@@ -14,6 +14,9 @@ export interface ChartBar {
   current?: boolean;
   /** Drawn a little lighter (weekends in day charts). */
   muted?: boolean;
+  /** A small dot above the bar, e.g. a day with all goals met; `markLabel` is read out with it. */
+  marked?: boolean;
+  markLabel?: string;
 }
 
 export interface BarChartProps {
@@ -102,18 +105,20 @@ export function BarChart({ bars, selected, onSelect, tone, format, label }: BarC
           ]
             .filter(Boolean)
             .join(' ');
+          const name = `${d.name} · ${format(d.value)}${d.marked && d.markLabel ? ` · ${d.markLabel}` : ''}`;
           return (
             <button
               key={d.id}
               type="button"
               className={classes}
               style={{ ['--h' as string]: `${pct}%` }}
-              aria-label={`${d.name} · ${format(d.value)}`}
-              title={`${d.name} · ${format(d.value)}`}
+              aria-label={name}
+              title={name}
               aria-pressed={d.id === selected}
               onClick={() => onSelect(d.id)}
             >
               <span className="chart__fill" />
+              {d.marked ? <span className="chart__mark" aria-hidden="true" /> : null}
             </button>
           );
         })}

@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_10_r12`
+File revision: `2026_10_r13`
 Last reviewed: `2026-10-15`
 
 Related repositories (inspiration, not dependencies):
@@ -288,7 +288,7 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 
 - [x] Count-down snack session: choose minutes, time left + progress, ends by itself, summary sheet, beep
 - [x] Daily goals: reps / time / snacks for all, a category or an exercise; Today progress, streak, "Goal reached"
-- [ ] History: mark days where all goals were met
+- [x] History: mark days where all goals were met (chart dot, day-row tag, "N of M days")
 
 ### Ideas parked (not planned)
 

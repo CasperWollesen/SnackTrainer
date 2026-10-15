@@ -844,3 +844,28 @@
 .goal--done .goal__bar > span {
   background: var(--success);
 }
+
+/* Days with all goals met in History */
+.history__goals {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--success);
+}
+
+.tag--goal {
+  margin-left: var(--space-2);
+  background: rgba(74, 222, 128, 0.14);
+  color: var(--success);
+}
+
+.chart__mark {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--h) + 4px);
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: var(--success);
+}

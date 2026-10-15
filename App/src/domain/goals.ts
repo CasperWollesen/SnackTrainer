@@ -87,6 +87,21 @@ export function goalStreak(data: GoalData, goal: DailyGoal, today: ISODate, maxD
   return streak;
 }
 
+/**
+ * Days in [from, to] on which every goal was met; empty when there are no goals. Judged by the
+ * goals as they are now (goals have no history), so changing a goal re-colours the past.
+ */
+export function daysAllGoalsMet(data: GoalData & Pick<AppData, 'settings'>, from: ISODate, to: ISODate): Set<ISODate> {
+  const goals = data.settings.dailyGoals;
+  const met = new Set<ISODate>();
+  if (goals.length === 0) return met;
+  const byDate = sessionsByDate(data.sessions.filter((s) => s.date >= from && s.date <= to));
+  for (const [date, sessions] of byDate) {
+    if (goals.every((g) => goalValueOf(data, g, sessions) >= g.target)) met.add(date);
+  }
+  return met;
+}
+
 /** Clamps a target into the metric's limits and onto its step. */
 export function clampTarget(metric: GoalMetric, target: number): number {
   const { min, max, step } = GOAL_LIMITS[metric];

@@ -2,6 +2,7 @@ import { BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 import { compareISO, isoWeekNumber, parseISODate } from '../../domain/dates';
 import { allExercises, findExercise, unknownExercise } from '../../domain/exercises';
+import { daysAllGoalsMet, goalProgress } from '../../domain/goals';
 import { comparisonFor, containsDate, isLatest, periodAt, recentPeriods, shiftPeriod, type Period, type PeriodKind } from '../../domain/periods';
 import { dailyTotals, exerciseTotals, sessionsBetween, sessionsWithExercise } from '../../domain/sessions';
 import { deltaOf, hourlyTotals, summarize, type Metric } from '../../domain/stats';
@@ -85,6 +86,10 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
   const sessions = sessionsBetween(filtered, comparison.current.from, comparison.current.to);
   const prevSessions = sessionsBetween(filtered, comparison.previous.from, comparison.previous.to);
 
+  // Goals are about the whole day, so they use all data, not the exercise filter.
+  const hasGoals = data.settings.dailyGoals.length > 0;
+  const goalDays = useMemo(() => daysAllGoalsMet(data, period.from, period.to), [data, period.from, period.to]);
+
   const usedExercises = useMemo(() => {
     const used = new Set(data.sessions.flatMap((s) => s.entries.map((e) => e.exerciseId)));
     return allExercises(data)
@@ -133,6 +138,17 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
   ];
   const comparedRange = formatDateRange(comparison.previous.from, comparison.previous.to, today);
 
+  // --- goals: met or not for a day, "N of M days" otherwise (elapsed days only)
+  let goalsLine: string | null = null;
+  if (hasGoals && isDay) {
+    const progress = goalProgress(data, period.from);
+    const done = progress.filter((p) => p.done).length;
+    goalsLine = done === progress.length ? texts.history.goalsMetDay : texts.history.goalsSomeMetDay(done, progress.length);
+  } else if (hasGoals) {
+    const elapsed = [...goalDays].filter((d) => compareISO(d, comparison.current.from) >= 0 && compareISO(d, comparison.current.to) <= 0);
+    goalsLine = texts.history.goalsMetDays(elapsed.length, current.days);
+  }
+
   // --- breakdown chart: hours for a day, days otherwise
   let breakdown: ChartBar[];
   if (isDay) {
@@ -147,7 +163,7 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
     breakdown = dayBars(
       days.map((d) => ({ date: d.date, value: chartValue(d, metric) })),
       today,
-    );
+    ).map((bar) => (goalDays.has(bar.id) ? { ...bar, marked: true, markLabel: texts.history.goalsMetMark } : bar));
   }
 
   // --- trend over recent periods
@@ -219,6 +235,7 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
       <p className="field__hint history__compared">
         {comparison.partial ? texts.history.comparedSoFar(comparedRange) : texts.history.compared(comparedRange)}
       </p>
+      {goalsLine ? <p className="history__goals">{goalsLine}</p> : null}
 
       <Section title={isDay ? texts.history.byHour : texts.history.byDay}>
         <div className="card">
@@ -233,7 +250,7 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
             label={isDay ? texts.history.byHour : texts.history.byDay}
           />
         </div>
-        <p className="field__hint">{isDay ? texts.history.byHourHint : texts.history.byDayHint}</p>
+        <p className="field__hint">{isDay ? texts.history.byHourHint : hasGoals ? texts.history.byDayHintGoals : texts.history.byDayHint}</p>
       </Section>
 
       <Section title={texts.history.trend}>
@@ -274,7 +291,10 @@ export function HistoryView({ data, today, state, onChange, onOpenDay, onOpenExe
                 aria-label={`${texts.history.openDay}: ${formatRelativeDay(d.date, today)}`}
               >
                 <span className="dayrow__label">
-                  <span className="dayrow__name">{formatRelativeDay(d.date, today)}</span>
+                  <span className="dayrow__name">
+                    {formatRelativeDay(d.date, today)}
+                    {goalDays.has(d.date) ? <span className="tag tag--goal">{texts.history.goalsMetTag}</span> : null}
+                  </span>
                   <span className="dayrow__meta">
                     {texts.today.session(d.sessions)} · {texts.history.entries(d.entries)}
                   </span>

@@ -1,11 +1,11 @@
 # Daily Goals
 
 Documentation ID: `APP-DAILY-GOALS`
-File revision: `2026_10_r1`
+File revision: `2026_10_r2`
 Last reviewed: `2026-10-15`
 
 Related code:
-- `App/src/domain/goals.ts` — `goalValueOf`, `goalProgress`, `newlyReachedGoals`, `goalStreak`, `GOAL_LIMITS`, `clampTarget`, `withGoal`, `withoutGoal`
+- `App/src/domain/goals.ts` — `goalValueOf`, `goalProgress`, `daysAllGoalsMet`, `newlyReachedGoals`, `goalStreak`, `GOAL_LIMITS`, `clampTarget`, `withGoal`, `withoutGoal`
 - `App/src/domain/goals.test.ts`
 - `App/src/domain/types.ts` — `DailyGoal`, `GoalMetric`, `Settings.dailyGoals`, `DATA_VERSION = 5`
 - `App/src/domain/backup.ts` — 4 → 5 step, `validateGoal`
@@ -13,6 +13,7 @@ Related code:
 - `App/src/ui/views/GoalsSheet.tsx`, `App/src/ui/views/GoalEditor.tsx` — list and editor (Menu → Daily goals)
 - `App/src/ui/views/TodayView.tsx` — `GoalsSection`
 - `App/src/ui/useActions.ts` — `saveGoal`, `deleteGoal` (Undo), "Goal reached" on log
+- `App/src/ui/views/HistoryView.tsx`, `App/src/ui/components/BarChart.tsx` (`marked`) — days with all goals met
 
 Related documentation:
 - `[Planning]/SnackTrainer Vision & Plan v1.md` (`PLANNING-VISION-V1`) — decision 17
@@ -27,6 +28,14 @@ Today shows a "Goals" section for the day shown: each goal with "35 / 50 reps", 
 green when met, and the streak (🔥 N days, from 2) when looking at today. With no goals, Today
 shows a small "Set a daily goal" link. Logging an entry that completes a goal adds
 "🎯 Goal reached: …" to the Logged toast.
+
+### In History
+
+Days where **every** goal was met get a green dot above their bar in the by-day chart (read out as
+"all goals met"), a "Goals met" tag in the Days list, and a line under the tiles: "🎯 All goals met
+on N of M days" (elapsed days only), or for the Day period "🎯 All goals met" / "Goals: 2 of 3 met".
+Goals are about whole days, so this ignores History's exercise filter. Goals have no history: they
+are judged as they are now, so changing a goal re-colours past days.
 
 ## Behavior Contract / Key Decisions
 
@@ -48,13 +57,15 @@ shows a small "Set a daily goal" link. Logging an entry that completes a goal ad
   15 reps → saved (data written as version 5), shown on Today and in the sheet; logging 10 more
   showed "Goal reached: Push-Up" and the row turned green; Edit → Delete → Undo restored it; the
   menu lists Daily goals after Exercises. No console errors after a clean reload.
+- History, 2026-10-15, demo data with "2 snacks a day": week 40 showed "All goals met on 3 of 7 days",
+  three chart dots on Wed–Fri (each bar's label ends "· all goals met") and the same three days tagged
+  "Goals met" in the Days list.
 
 Not verified: on a real phone, streak display with real multi-day data in the browser (covered by
 unit tests), and the native select's look on iOS.
 
 ## Open Items / Ideas
 
-- History: mark days where all goals were met; a "goals met" count per period.
 - Weekly goals (e.g. 500 push-ups a week) would reuse the same value function over a week's sessions.
 - A bodyweight-only scope (the catalogue's `bodyweight` flag) if categories are not enough.
 

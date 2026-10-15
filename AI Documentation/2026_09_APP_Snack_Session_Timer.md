@@ -1,7 +1,7 @@
 # Snack Session Timer and Stretching (Milestone 4)
 
 Documentation ID: `APP-SNACK-SESSION-TIMER`
-File revision: `2026_10_r3`
+File revision: `2026_10_r4`
 Last reviewed: `2026-10-15`
 
 Related code:
@@ -110,6 +110,19 @@ a logged entry shows in the bar, the count-down ended by itself, the summary lis
 session was saved with `durationSeconds: 300`. Not verified: the beep and vibration (the preview pane
 has no audio output to check), and behaviour on a locked iPhone, where the page is frozen; the end is
 then only noticed when the app is opened again (no sound in that case).
+
+## Start sheet and Discard (added 2026-10-15)
+
+- Today has one "Start snack session" button; it opens `StartSessionSheet` with Count up and
+  Count-down (minutes stepper). `actions.startTimer(minutes | null)` stores the mode as
+  `settings.timerMode` (highlighted next time) and the length as `settings.countdownMinutes`.
+- Discard (timer bar footer) → `discardSession`: removes the timer and its session with every entry
+  logged in it; nothing else is touched. Undo → `restoreDiscarded`: the session is put back in order and
+  the timer runs on (a count-down keeps its original end).
+
+Verified 2026-10-15 in the dev server: the sheet starts a 5-minute count-down; logging Squat ×10, then
+Discard removed the session ("Session discarded with its 1 entry"), and Undo restored the session and
+the running count-down. A discard of an empty count-up timer and its Undo also worked.
 
 ## Screen kept on (added 2026-10-15)
 

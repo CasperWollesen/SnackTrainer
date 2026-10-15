@@ -4,10 +4,12 @@ import { addEntry, deleteEntry, updateEntry } from './sessions';
 import {
   autoStopIfIdle,
   countdownEndMs,
+  discardSession,
   elapsedSeconds,
   finishCountdownIfDue,
   idleDeadline,
   remainingSeconds,
+  restoreDiscarded,
   resumeSession,
   startSession,
   stopSession,
@@ -134,6 +136,32 @@ describe('session timer', () => {
       expect(r.session).toBeNull();
       expect(r.data.sessions).toHaveLength(0);
       expect(r.data.activeSession).toBeNull();
+    });
+  });
+
+  describe('discard', () => {
+    it('throws away the timer and everything logged in it, other sessions stay; Undo restores', () => {
+      let d = log(emptyData(), '2026-09-23T08:00').data; // an earlier quick log
+      d = startSession(d, START, 300);
+      d = log(d, '2026-09-23T10:01').data;
+      d = log(d, '2026-09-23T10:02', 5).data;
+      const before = d;
+      const r = discardSession(d);
+      expect(r.data.activeSession).toBeNull();
+      expect(r.data.sessions).toHaveLength(1);
+      expect(r.data.sessions[0]!.startedAt).toBe('2026-09-23T08:00');
+      expect(r.session?.entries).toHaveLength(2);
+      const back = restoreDiscarded(r.data, r.discarded!, r.session, T0 + 2 * MIN);
+      expect(back.sessions).toEqual(before.sessions);
+      expect(back.activeSession).toMatchObject({ id: before.activeSession!.id, countdownSeconds: 300, lastActivityMs: T0 + 2 * MIN });
+    });
+
+    it('discards an empty timer and does nothing without one', () => {
+      const r = discardSession(startSession(emptyData(), START));
+      expect(r.data.activeSession).toBeNull();
+      expect(r.session).toBeNull();
+      const none = emptyData();
+      expect(discardSession(none).data).toBe(none);
     });
   });
 });

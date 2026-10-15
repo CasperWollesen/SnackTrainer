@@ -1,4 +1,4 @@
-import { Hourglass, Plus, Square, Timer } from 'lucide-react';
+import { Hourglass, Plus, Square, Timer, Trash2 } from 'lucide-react';
 import { toTimeString } from '../../domain/dates';
 import { countdownEndMs, elapsedSeconds, idleDeadline, remainingSeconds } from '../../domain/timer';
 import { totalsOf } from '../../domain/sessions';
@@ -12,6 +12,8 @@ export interface ActiveSessionBarProps {
   nowMs: number;
   onLog: () => void;
   onStop: () => void;
+  /** Throws the session away (with Undo). */
+  onDiscard: () => void;
   onKeepGoing: () => void;
   /** The screen is kept on (wake lock held). */
   screenOn?: boolean;
@@ -19,9 +21,9 @@ export interface ActiveSessionBarProps {
 
 /**
  * Shown on every tab while a snack session timer runs: elapsed time (or the time left of a
- * count-down, with a progress bar), what was logged, Log and Stop.
+ * count-down, with a progress bar), what was logged, Log, Stop and Discard.
  */
-export function ActiveSessionBar({ data, nowMs, onLog, onStop, onKeepGoing, screenOn = false }: ActiveSessionBarProps) {
+export function ActiveSessionBar({ data, nowMs, onLog, onStop, onDiscard, onKeepGoing, screenOn = false }: ActiveSessionBarProps) {
   const active = data.activeSession;
   if (!active) return null;
   const session = data.sessions.find((s) => s.id === active.id);
@@ -62,28 +64,28 @@ export function ActiveSessionBar({ data, nowMs, onLog, onStop, onKeepGoing, scre
         </div>
       </div>
       {countdown ? (
-        <>
-          <div className="timerbar__progress" aria-hidden="true">
-            <span style={{ width: `${Math.min(100, (elapsedSeconds(active, nowMs) / (active.countdownSeconds ?? 1)) * 100)}%` }} />
+        <div className="timerbar__progress" aria-hidden="true">
+          <span style={{ width: `${Math.min(100, (elapsedSeconds(active, nowMs) / (active.countdownSeconds ?? 1)) * 100)}%` }} />
+        </div>
+      ) : null}
+      <div className="timerbar__foot">
+        {!countdown && warning ? (
+          <div className="timerbar__warning" role="status">
+            <span>{texts.timer.stoppingIn(formatDuration(Math.max(0, Math.ceil(leftMs / 1000))))}</span>
+            <Button size="sm" variant="ghost" onClick={onKeepGoing}>
+              {texts.timer.keepGoing}
+            </Button>
           </div>
+        ) : (
           <p className="timerbar__hint">
-            {texts.timer.endsAt(toTimeString(new Date(endMs)))}
+            {countdown ? texts.timer.endsAt(toTimeString(new Date(endMs))) : texts.timer.autoStopHint(timeout)}
             {screenOn ? ` ${texts.timer.screenOn}` : ''}
           </p>
-        </>
-      ) : warning ? (
-        <div className="timerbar__warning" role="status">
-          <span>{texts.timer.stoppingIn(formatDuration(Math.max(0, Math.ceil(leftMs / 1000))))}</span>
-          <Button size="sm" variant="ghost" onClick={onKeepGoing}>
-            {texts.timer.keepGoing}
-          </Button>
-        </div>
-      ) : (
-        <p className="timerbar__hint">
-          {texts.timer.autoStopHint(timeout)}
-          {screenOn ? ` ${texts.timer.screenOn}` : ''}
-        </p>
-      )}
+        )}
+        <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} onClick={onDiscard}>
+          {texts.timer.discard}
+        </Button>
+      </div>
     </section>
   );
 }

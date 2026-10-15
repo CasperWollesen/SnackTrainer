@@ -33,6 +33,7 @@ import { MenuSheet, type MenuItem } from './ui/views/MenuSheet';
 import { SettingsSheet } from './ui/views/SettingsSheet';
 import { ShareSheet } from './ui/views/ShareSheet';
 import { SplashScreen } from './ui/views/SplashScreen';
+import { StartSessionSheet } from './ui/views/StartSessionSheet';
 import { TodayView } from './ui/views/TodayView';
 
 type Overlay =
@@ -44,6 +45,7 @@ type Overlay =
   | { kind: 'settings' }
   | { kind: 'share' }
   | { kind: 'goals' }
+  | { kind: 'start' }
   | { kind: 'goal'; goal: DailyGoal | null }
   | { kind: 'menu' };
 
@@ -197,6 +199,7 @@ function Shell() {
             openLog(null);
           }}
           onStop={actions.stopTimer}
+          onDiscard={actions.discardTimer}
           onKeepGoing={() => actions.touchTimer(true)}
           screenOn={wakeLock === 'on'}
         />
@@ -208,7 +211,7 @@ function Shell() {
             today={today}
             onChangeDate={setDate}
             onOpenEntry={(entry: Entry) => setOverlay({ kind: 'entry', entryId: entry.id })}
-            onStartSession={actions.startTimer}
+            onStartSession={() => setOverlay({ kind: 'start' })}
             onOpenGoals={() => setOverlay({ kind: 'goals' })}
           />
         ) : tab === 'history' ? (
@@ -275,6 +278,17 @@ function Shell() {
       <SettingsSheet open={overlay.kind === 'settings'} data={data} onClose={closeOverlay} install={install} onDemo={actions.setDemo} />
 
       <ShareSheet open={overlay.kind === 'share'} onClose={closeOverlay} />
+
+      <StartSessionSheet
+        open={overlay.kind === 'start'}
+        data={data}
+        onClose={closeOverlay}
+        onStart={(minutes) => {
+          // Close first so the "started" toast is reachable.
+          closeOverlay();
+          actions.startTimer(minutes);
+        }}
+      />
 
       <GoalsSheet open={overlay.kind === 'goals'} data={data} today={today} onClose={closeOverlay} onEdit={(goal) => setOverlay({ kind: 'goal', goal })} />
 

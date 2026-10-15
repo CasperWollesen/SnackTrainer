@@ -737,13 +737,48 @@
   }
 }
 
-/* Count-down on Today and in the timer bar */
-.start-session__options {
+/* Start sheet (StartSessionSheet) and the timer bar's footer */
+.start-option {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+}
+
+.start-option__head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.start-option__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.start-option__icon--up {
+  color: var(--time);
+}
+
+.start-option__title {
+  margin: 0 0 2px;
+  font-size: var(--text-lg);
+}
+
+.timerbar__foot {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+.timerbar__foot > :first-child {
+  flex: 1;
+  min-width: 0;
 }
 
 .timerbar__progress {

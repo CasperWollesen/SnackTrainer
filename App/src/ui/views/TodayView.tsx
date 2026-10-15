@@ -1,17 +1,15 @@
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Hourglass, Target, Timer, Zap } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Target, Timer, Zap } from 'lucide-react';
 import { useMemo } from 'react';
 import { addDays, timeOf } from '../../domain/dates';
 import { isDemoId } from '../../domain/demo';
 import { goalProgress, goalStreak } from '../../domain/goals';
 import { findExercise, unknownExercise } from '../../domain/exercises';
 import { sessionsOn, totalsOf } from '../../domain/sessions';
-import type { AppData, Entry, ISODate, Session, TimerMode } from '../../domain/types';
-import { repository } from '../../storage/repository';
+import type { AppData, Entry, ISODate, Session } from '../../domain/types';
 import { texts } from '../../texts';
-import { Button, IconButton, Segmented } from '../components/Button';
+import { Button, IconButton } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { GoalList } from '../components/GoalList';
-import { Stepper } from '../components/FormFields';
 import { Section } from '../components/Section';
 import { StatTiles } from '../components/StatTiles';
 import { formatDateWithYear, formatDuration, formatRelativeDay, formatTotalTime } from '../format';
@@ -22,6 +20,7 @@ export interface TodayViewProps {
   today: ISODate;
   onChangeDate: (date: ISODate) => void;
   onOpenEntry: (entry: Entry) => void;
+  /** Opens the start sheet (Count up or Count-down). */
   onStartSession: () => void;
   onOpenGoals: () => void;
 }
@@ -61,7 +60,14 @@ export function TodayView({ data, date, today, onChangeDate, onOpenEntry, onStar
 
       <GoalsSection data={data} date={date} today={today} onOpen={onOpenGoals} />
 
-      {isToday && !data.activeSession ? <StartSession data={data} onStart={onStartSession} /> : null}
+      {isToday && !data.activeSession ? (
+        <div className="start-session">
+          <Button variant="primary" block icon={<Timer size={20} />} onClick={onStartSession}>
+            {texts.timer.start}
+          </Button>
+          <p className="field__hint">{texts.timer.startHint}</p>
+        </div>
+      ) : null}
 
       {sessions.length === 0 ? (
         <EmptyState icon={<Zap size={26} />} title={texts.today.emptyTitle} text={isToday ? texts.today.emptyText : texts.today.emptyPast} />
@@ -104,38 +110,6 @@ function GoalsSection({ data, date, today, onOpen }: { data: AppData; date: ISOD
     >
       <GoalList progress={progress} data={data} streaks={streaks} onSelect={onOpen} />
     </Section>
-  );
-}
-
-const TIMER_MODES: { value: TimerMode; label: string }[] = [
-  { value: 'up', label: texts.timer.modeUp },
-  { value: 'down', label: texts.timer.modeDown },
-];
-
-/** Count up / Count-down choice (remembered in settings), the count-down length and Start. */
-function StartSession({ data, onStart }: { data: AppData; onStart: () => void }) {
-  const { timerMode, countdownMinutes } = data.settings;
-  const down = timerMode === 'down';
-  return (
-    <div className="start-session">
-      <div className="start-session__options">
-        <Segmented value={timerMode} options={TIMER_MODES} onChange={(mode) => repository.setSettings({ timerMode: mode })} label={texts.timer.modeLabel} />
-        {down ? (
-          <Stepper
-            label={texts.timer.minutesLabel}
-            value={countdownMinutes}
-            min={1}
-            max={60}
-            format={(v) => `${v} ${texts.common.minutes}`}
-            onChange={(v) => repository.setSettings({ countdownMinutes: v })}
-          />
-        ) : null}
-      </div>
-      <Button variant="primary" block icon={down ? <Hourglass size={20} /> : <Timer size={20} />} onClick={onStart}>
-        {down ? texts.timer.startCountdown(countdownMinutes) : texts.timer.start}
-      </Button>
-      <p className="field__hint">{down ? texts.timer.countdownHint : texts.timer.startHint}</p>
-    </div>
   );
 }
 

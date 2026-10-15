@@ -1,5 +1,5 @@
 import { newId } from './ids';
-import { toLocalDateTime } from './dates';
+import { compareISO, toLocalDateTime } from './dates';
 import type { ActiveSession, AppData, Session } from './types';
 
 /**
@@ -104,4 +104,32 @@ export function resumeSession(data: AppData, stopped: ActiveSession, nowMs: numb
     return rest;
   });
   return { ...data, sessions, activeSession: { ...stopped, lastActivityMs: Math.max(stopped.lastActivityMs, nowMs) } };
+}
+
+export interface DiscardResult {
+  data: AppData;
+  /** The timer that was discarded, and its session with every entry logged in it (for Undo). */
+  discarded: ActiveSession | null;
+  session: Session | null;
+}
+
+/** Throws the running session away: the timer and everything logged in it. Nothing is saved. */
+export function discardSession(data: AppData): DiscardResult {
+  const active = data.activeSession;
+  if (!active) return { data, discarded: null, session: null };
+  const session = data.sessions.find((s) => s.id === active.id) ?? null;
+  return {
+    data: { ...data, activeSession: null, sessions: session ? data.sessions.filter((s) => s.id !== session.id) : data.sessions },
+    discarded: active,
+    session,
+  };
+}
+
+/** Undo for a discard: the session and its entries come back and the timer runs on. */
+export function restoreDiscarded(data: AppData, discarded: ActiveSession, session: Session | null, nowMs: number): AppData {
+  if (data.activeSession) return data;
+  const sessions = session && !data.sessions.some((s) => s.id === session.id)
+    ? [...data.sessions, session].sort((a, b) => compareISO(a.startedAt, b.startedAt))
+    : data.sessions;
+  return { ...data, sessions, activeSession: { ...discarded, lastActivityMs: Math.max(discarded.lastActivityMs, nowMs) } };
 }

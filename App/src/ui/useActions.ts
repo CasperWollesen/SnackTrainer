@@ -1,6 +1,17 @@
 import { useCallback, useMemo } from 'react';
 import { removeDemoData, withDemoData } from '../domain/demo';
-import { autoStopIfIdle, countdownEndMs, finishCountdownIfDue, resumeSession, startSession, stopSession, touchSession, type StopResult } from '../domain/timer';
+import {
+  autoStopIfIdle,
+  countdownEndMs,
+  discardSession,
+  finishCountdownIfDue,
+  restoreDiscarded,
+  resumeSession,
+  startSession,
+  stopSession,
+  touchSession,
+  type StopResult,
+} from '../domain/timer';
 import { dateOf } from '../domain/dates';
 import { findExercise, unknownExercise, withHidden } from '../domain/exercises';
 import { newlyReachedGoals, withGoal, withoutGoal } from '../domain/goals';
@@ -137,13 +148,29 @@ export function useActions() {
     [afterWrite],
   );
 
-  /** Starts the timer in the mode chosen on Today (settings.timerMode / countdownMinutes). */
-  const startTimer = useCallback(() => {
-    const { timerMode, countdownMinutes } = repository.get().settings;
-    const countdown = timerMode === 'down';
-    if (countdown) unlockSound(); // the start tap is the user gesture browsers require for the end beep
-    repository.update((d) => startSession(d, new Date(), countdown ? countdownMinutes * 60 : undefined));
-    afterWrite(countdown ? texts.toast.countdownStarted(countdownMinutes) : texts.toast.sessionStarted);
+  /** Starts counting up (null) or a count-down of that many minutes; the mode is remembered. */
+  const startTimer = useCallback(
+    (countdownMinutes: number | null) => {
+      const countdown = countdownMinutes !== null;
+      if (countdown) unlockSound(); // the start tap is the user gesture browsers require for the end beep
+      repository.update((d) => {
+        const settings = { ...d.settings, timerMode: countdown ? ('down' as const) : ('up' as const), ...(countdown ? { countdownMinutes } : {}) };
+        return startSession({ ...d, settings }, new Date(), countdown ? countdownMinutes * 60 : undefined);
+      });
+      afterWrite(countdown ? texts.toast.countdownStarted(countdownMinutes) : texts.toast.sessionStarted);
+    },
+    [afterWrite],
+  );
+
+  /** Throws the running session away with everything logged in it; Undo brings it all back. */
+  const discardTimer = useCallback(() => {
+    const result = discardSession(repository.get());
+    const { discarded, session } = result;
+    if (!discarded) return;
+    repository.replaceAll(result.data);
+    afterWrite(texts.toast.sessionThrownAway(session?.entries.length ?? 0), () =>
+      repository.update((d) => restoreDiscarded(d, discarded, session, Date.now())),
+    );
   }, [afterWrite]);
 
   /** Shared by Stop and auto-stop: saves, then offers Undo (the timer runs on). */
@@ -191,7 +218,7 @@ export function useActions() {
   }, []);
 
   return useMemo(
-    () => ({ log, edit, remove, saveGoal, deleteGoal, saveExercise, deleteExercise, setHidden, setDemo, startTimer, stopTimer, autoStopTimer, touchTimer }),
-    [log, edit, remove, saveGoal, deleteGoal, saveExercise, deleteExercise, setHidden, setDemo, startTimer, stopTimer, autoStopTimer, touchTimer],
+    () => ({ log, edit, remove, saveGoal, deleteGoal, saveExercise, deleteExercise, setHidden, setDemo, startTimer, stopTimer, discardTimer, autoStopTimer, touchTimer }),
+    [log, edit, remove, saveGoal, deleteGoal, saveExercise, deleteExercise, setHidden, setDemo, startTimer, stopTimer, discardTimer, autoStopTimer, touchTimer],
   );
 }

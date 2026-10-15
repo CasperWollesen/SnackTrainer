@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_10_r15`
+File revision: `2026_10_r16`
 Last reviewed: `2026-10-15`
 
 Related repositories (inspiration, not dependencies):
@@ -75,8 +75,12 @@ when the app was closed. Logging, working in the log sheet and a running stopwat
 activity; the last minute shows a "Keep going" warning. A timer with nothing logged leaves nothing
 behind. Stop and auto-stop have Undo (the timer runs on). The quick Log button is unchanged.
 
-**Count-down.** Above Start, "Count up | Count-down" picks the mode, and Count-down shows a minutes
-stepper (1–60, default 5). Both are remembered. A count-down shows the time left and a progress bar,
+**Starting and discarding.** "Start snack session" opens a sheet with two choices: **Count up**
+and **Count-down** with a minutes stepper (1–60, default 5); the last mode used is highlighted and
+the length remembered. **Discard** in the timer bar throws the running session away with everything
+logged in it (toast with Undo, which brings both back and lets the timer run on).
+
+**Count-down.** A count-down shows the time left and a progress bar,
 is never stopped by inactivity and ends by itself exactly at its end time (also when the app was
 closed), so its duration is the chosen length. Then a "Time's up!" sheet sums up what was logged per
 exercise (with Log / Done), with three beeps and a vibration where the browser allows it. Stop
@@ -294,6 +298,7 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 - [x] Daily goals: reps / time / snacks for all, a category or an exercise; Today progress, streak, "Goal reached"
 - [x] History: mark days where all goals were met (chart dot, day-row tag, "N of M days")
 - [x] Keep the screen on while a session timer runs (wake lock)
+- [x] Start sheet (choose Count up / Count-down) and Discard a running session (with Undo)
 
 ### Ideas parked (not planned)
 

@@ -55,6 +55,7 @@ export const texts = {
     countdownHint: 'Counts down while you snack. Log as you go; when the time is up you get a summary.',
     countdown: 'Count-down',
     endsAt: (time: string) => `Ends at ${time}. Inactivity does not stop it.`,
+    screenOn: 'Screen stays on while it runs.',
     done: {
       title: "Time's up!",
       subtitle: (length: string) => `${length} count-down`,

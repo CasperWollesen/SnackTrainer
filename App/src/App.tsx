@@ -16,6 +16,7 @@ import { useClock } from './ui/hooks/useClock';
 import { useInstallPrompt } from './ui/hooks/useInstallPrompt';
 import { useNow } from './ui/hooks/useNow';
 import { useSplash } from './ui/hooks/useSplash';
+import { useWakeLock } from './ui/hooks/useWakeLock';
 import { ToastProvider, useToast } from './ui/hooks/useToast';
 import { playTimeUp } from './ui/sound';
 import { useActions, type CountdownFinished } from './ui/useActions';
@@ -88,6 +89,8 @@ function Shell() {
   // a count-up timer that has been idle too long (also right after opening the app).
   const timerRunning = data.activeSession !== null;
   const nowMs = useNow(timerRunning);
+  // Keep the screen on while a session runs, so the phone does not lock (and freeze the count-down).
+  const wakeLock = useWakeLock(timerRunning);
   const [countdownDone, setCountdownDone] = useState<CountdownFinished | null>(null);
   useEffect(() => {
     if (!timerRunning) return;
@@ -195,6 +198,7 @@ function Shell() {
           }}
           onStop={actions.stopTimer}
           onKeepGoing={() => actions.touchTimer(true)}
+          screenOn={wakeLock === 'on'}
         />
 
         {tab === 'today' ? (

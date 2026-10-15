@@ -1,7 +1,7 @@
 # SnackTrainer – Vision & Plan v1
 
 Documentation ID: `PLANNING-VISION-V1`
-File revision: `2026_10_r13`
+File revision: `2026_10_r14`
 Last reviewed: `2026-10-15`
 
 Related repositories (inspiration, not dependencies):
@@ -157,6 +157,9 @@ launch each day; replay from the menu.
 17. **Daily goals are one shape** (`DailyGoal`: metric reps / time / sessions, a target per day, scope all /
     category / exercise) in `settings.dailyGoals`, so they travel with backups. Time is timed entries,
     like the Time tile. A streak ignores an unfinished today. See `2026_10_APP_Daily_Goals.md`. Data version 5.
+18. **The screen stays on while a session timer runs** (Screen Wake Lock API, `ui/hooks/useWakeLock.ts`,
+    same pattern as CW.ShowerTimer), so a phone on the floor does not lock and freeze a count-down. Local
+    only. Notifications for a closed or locked app would need Web Push through a server, which stays a non-goal.
 
 ## Data Model
 
@@ -289,6 +292,7 @@ the DOM or storage; only `repository.ts` writes to `localStorage`.
 - [x] Count-down snack session: choose minutes, time left + progress, ends by itself, summary sheet, beep
 - [x] Daily goals: reps / time / snacks for all, a category or an exercise; Today progress, streak, "Goal reached"
 - [x] History: mark days where all goals were met (chart dot, day-row tag, "N of M days")
+- [x] Keep the screen on while a session timer runs (wake lock)
 
 ### Ideas parked (not planned)
 

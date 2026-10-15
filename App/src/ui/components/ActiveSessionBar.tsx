@@ -13,13 +13,15 @@ export interface ActiveSessionBarProps {
   onLog: () => void;
   onStop: () => void;
   onKeepGoing: () => void;
+  /** The screen is kept on (wake lock held). */
+  screenOn?: boolean;
 }
 
 /**
  * Shown on every tab while a snack session timer runs: elapsed time (or the time left of a
  * count-down, with a progress bar), what was logged, Log and Stop.
  */
-export function ActiveSessionBar({ data, nowMs, onLog, onStop, onKeepGoing }: ActiveSessionBarProps) {
+export function ActiveSessionBar({ data, nowMs, onLog, onStop, onKeepGoing, screenOn = false }: ActiveSessionBarProps) {
   const active = data.activeSession;
   if (!active) return null;
   const session = data.sessions.find((s) => s.id === active.id);
@@ -64,7 +66,10 @@ export function ActiveSessionBar({ data, nowMs, onLog, onStop, onKeepGoing }: Ac
           <div className="timerbar__progress" aria-hidden="true">
             <span style={{ width: `${Math.min(100, (elapsedSeconds(active, nowMs) / (active.countdownSeconds ?? 1)) * 100)}%` }} />
           </div>
-          <p className="timerbar__hint">{texts.timer.endsAt(toTimeString(new Date(endMs)))}</p>
+          <p className="timerbar__hint">
+            {texts.timer.endsAt(toTimeString(new Date(endMs)))}
+            {screenOn ? ` ${texts.timer.screenOn}` : ''}
+          </p>
         </>
       ) : warning ? (
         <div className="timerbar__warning" role="status">
@@ -74,7 +79,10 @@ export function ActiveSessionBar({ data, nowMs, onLog, onStop, onKeepGoing }: Ac
           </Button>
         </div>
       ) : (
-        <p className="timerbar__hint">{texts.timer.autoStopHint(timeout)}</p>
+        <p className="timerbar__hint">
+          {texts.timer.autoStopHint(timeout)}
+          {screenOn ? ` ${texts.timer.screenOn}` : ''}
+        </p>
       )}
     </section>
   );

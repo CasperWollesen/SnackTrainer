@@ -1,7 +1,7 @@
 # Snack Session Timer and Stretching (Milestone 4)
 
 Documentation ID: `APP-SNACK-SESSION-TIMER`
-File revision: `2026_10_r2`
+File revision: `2026_10_r3`
 Last reviewed: `2026-10-15`
 
 Related code:
@@ -110,6 +110,17 @@ a logged entry shows in the bar, the count-down ended by itself, the summary lis
 session was saved with `durationSeconds: 300`. Not verified: the beep and vibration (the preview pane
 has no audio output to check), and behaviour on a locked iPhone, where the page is frozen; the end is
 then only noticed when the app is opened again (no sound in that case).
+
+## Screen kept on (added 2026-10-15)
+
+While `activeSession` is set, `useWakeLock` (App) holds a screen wake lock and re-requests it when
+the app becomes visible again (browsers drop it when hidden). The bar adds "Screen stays on while it
+runs." only while the lock is held; unsupported or refused shows nothing. This keeps a count-down's
+beep working with the phone on the floor, as long as the app stays in front.
+
+Verified 2026-10-15: the preview pane refuses the lock (`NotAllowedError`); the app shows no text and
+no error, the timer runs normally. Not verified: that the lock is granted and the screen stays on on
+a real iPhone / Android (iOS supports the API from Safari 16.4, also in installed PWAs).
 
 ## Open Items / Deliberately Not Done
 
